@@ -22,7 +22,8 @@ export default function ActiveFlight() {
   // Redirect if no active session
   useEffect(() => {
     if (!activeSession) {
-      setLocation('/');
+      const timer = setTimeout(() => setLocation('/book'), 3000);
+      return () => clearTimeout(timer);
     }
   }, [activeSession, setLocation]);
 
@@ -103,7 +104,19 @@ export default function ActiveFlight() {
     setLocation('/logbook');
   };
 
-  if (!activeSession) return null;
+  if (!activeSession) {
+    return (
+      <div className="relative min-h-screen flex flex-col items-center justify-center bg-[#0a0e1a] text-white">
+        <StarField />
+        <div className="relative z-10 text-center space-y-4 px-4">
+          <div className="text-5xl mb-4">✈️</div>
+          <h2 className="text-2xl font-bold">No flight in progress</h2>
+          <p className="text-muted-foreground">Book a flight first to start your focus session.</p>
+          <p className="text-sm text-muted-foreground/60">Redirecting to booking...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[#0a0e1a] text-white overflow-hidden">
