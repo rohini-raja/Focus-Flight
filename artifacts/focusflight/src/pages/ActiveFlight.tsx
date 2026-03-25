@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Volume2, VolumeX, CloudRain, Wind, Radio, AlertTriangle } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, CloudRain, Wind, Radio, AlertTriangle, Plane } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { StarField } from '@/components/StarField';
 import { FlightArc } from '@/components/FlightArc';
