@@ -7,6 +7,8 @@ import { useSession } from '@/context/SessionContext';
 import { useTimer } from '@/hooks/use-timer';
 import { useLogbook } from '@/hooks/use-storage';
 import { useAmbientSound } from '@/hooks/use-ambient-sound';
+import { TrainWindowView } from '@/components/TrainWindowView';
+import { BusWindowView } from '@/components/BusWindowView';
 import { formatTime, generateIata, FocusType, SessionConfig } from '@/utils/flight-utils';
 import confetti from 'canvas-confetti';
 
@@ -196,6 +198,15 @@ function ActiveTransitSession({
           </div>
         </div>
 
+        {/* Window View */}
+        <div className="w-full flex justify-center py-4">
+          {vehicle === 'train' ? (
+            <TrainWindowView progress={progress} />
+          ) : (
+            <BusWindowView progress={progress} />
+          )}
+        </div>
+
         {/* Route visualization */}
         <div className="bg-card/50 border border-white/10 rounded-2xl p-6">
           {vehicle === 'train' ? (
@@ -326,7 +337,10 @@ export default function TransitMode() {
 
   if (activeSession) {
     return (
-      <div className="relative min-h-screen">
+      <div 
+        className="relative min-h-screen transition-colors duration-1000"
+        style={{ backgroundColor: vehicle === 'train' ? '#0f1c13' : '#121215' }}
+      >
         <StarField />
         <div className="relative z-10">
           <ActiveTransitSession
