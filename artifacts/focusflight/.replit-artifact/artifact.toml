@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "FocusFlight"
+version = "1.0.0"
+id = "artifacts/focusflight"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20849
+
+[services.development]
+run = "pnpm --filter @workspace/focusflight run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/focusflight", "run", "build" ]
+publicDir = "artifacts/focusflight/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20849"
+BASE_PATH = "/"

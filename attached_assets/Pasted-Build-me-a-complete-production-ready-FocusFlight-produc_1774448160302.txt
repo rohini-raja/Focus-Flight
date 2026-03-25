@@ -1,0 +1,248 @@
+Build me a complete, production-ready **FocusFlight** productivity web app — a focus timer that turns work sessions into immersive virtual flights. Use **React + Vite**, **Tailwind CSS**, and **Framer Motion** for animations. The entire app should be single-page with client-side routing via React Router.
+
+---
+
+### 🎨 DESIGN SYSTEM
+
+- **Color palette:**
+  - Background: `#0a0e1a` (deep night sky)
+  - Primary accent: `#4fc3f7` (sky blue)
+  - Secondary accent: `#ffd54f` (golden yellow — like cabin lights)
+  - Surface cards: `#111827` with subtle glassmorphism
+  - Text: `#f0f4ff` primary, `#8899aa` muted
+- **Font:** Import from Google Fonts — `Space Grotesk` for headings, `DM Sans` for body
+- **Aesthetic:** Aviation cockpit meets modern productivity app. Dark, immersive, premium. Use subtle star/cloud particle backgrounds (CSS-only or canvas). Boarding pass UI elements (dashed borders, ticket perforations). Glassmorphism cards.
+
+---
+
+### 📱 PAGES & ROUTES
+
+Build these pages using React Router:
+
+1. **`/` — Landing / Home**
+2. **`/book` — Book a Flight (Start Focus Session)**
+3. **`/flight` — Active Flight (Focus Timer)**
+4. **`/logbook` — Flight Logbook (History & Stats)**
+5. **`/transit` — Train & Bus Mode**
+6. **`/settings` — Settings**
+
+---
+
+### 🏠 PAGE 1 — LANDING PAGE (`/`)
+
+- Full-screen hero with animated star field background (use CSS `@keyframes` to twinkle 200 pseudo-random dots)
+- Large headline: **"Your focus, cleared for takeoff."**
+- Subheadline: "Turn your work sessions into immersive flights. Stay focused, track progress, arrive at your destination."
+- Two CTA buttons: **"Book a Flight"** → `/book` and **"View Logbook"** → `/logbook`
+- Feature cards section (3 cards in a row) with icons:
+  - ✈️ **Custom Flights** — "Set your destination, duration, and focus type. Every session is a unique journey."
+  - 🗺️ **Live Route Tracking** — "Watch your progress on a real-time animated flight path as you work."
+  - 📊 **Focus Analytics** — "Track miles flown, sessions completed, and focus streaks over time."
+- A horizontal scrolling "route ticker" (marquee) showing example routes: `BOM → LHR · 9h 30m · Deep Work` etc.
+- Footer with links to all pages
+
+---
+
+### 🎫 PAGE 2 — BOOK A FLIGHT (`/book`)
+
+This is the session setup page. It should look like an airline booking form but stylized.
+
+**Step 1 — Choose Route:**
+- "Departure City" input (text, with placeholder like "Where are you now?")
+- "Destination City" input (text, with placeholder like "Where do you want to go?")
+- Swap button (⇄) between the two
+- Show a few **Quick Route suggestions** as clickable chips: `Mumbai → London`, `Delhi → Tokyo`, `Chennai → New York`, `Bangalore → Sydney`, `Kolkata → Paris`
+
+**Step 2 — Configure Flight:**
+- **Focus Duration:** A visual slider from 15 min to 180 min, displayed as flight time (e.g. "2h 15m flight")
+- **Focus Type:** Button group selector — Deep Work / Study / Creative / Meeting / Reading
+- **Session Label:** Optional text input for what you're working on (e.g. "Chapter 4 of thesis")
+- **Transit Mode toggle:** A toggle switch to switch to Train/Bus mode (links to `/transit` if toggled)
+
+**Step 3 — Boarding Pass Preview:**
+- A live-updating boarding pass card (styled like a real boarding pass with dashed perforations, gate info, seat number — randomly generated, e.g. "Seat 12A", "Gate B7")
+- Boarding pass shows: FROM / TO codes (auto-generate IATA-style 3-letter codes from city names), duration, focus type, today's date
+- **"Check In →"** button to proceed
+
+**Step 4 — Boarding Sequence (Modal/Overlay):**
+When user clicks Check In, show a full-screen overlay sequence with animated text:
+1. "Boarding pass verified ✓"
+2. "Finding your seat..."
+3. "Cabin doors closing."
+4. "Runway cleared. Prepare for takeoff. 🛫"
+Then auto-navigate to `/flight` with session data passed via React state/context
+
+---
+
+### ✈️ PAGE 3 — ACTIVE FLIGHT (`/flight`)
+
+This is the core focus timer screen. Full-screen immersive experience.
+
+**Top bar:**
+- Route: `BOM → LHR` with a small animated plane icon sliding across
+- Elapsed time and remaining time
+
+**Center — Animated Flight Map:**
+- An SVG world map (use a simple flat projection, hand-coded SVG or use a lightweight library)
+- A dashed curved flight path arc between the two cities (approximate coordinates)
+- Animated ✈️ icon that moves along the path proportional to % time elapsed
+- Show % complete (e.g. "67% to destination")
+
+**Focus Panel (below map):**
+- Large countdown timer (HH:MM:SS) in monospace font
+- Current task label
+- Pause / Resume button
+- **"Request Early Landing"** button (ends session early with confirmation modal)
+
+**Ambient Sounds Panel:**
+- Small audio controls row: White Noise / Rain / Engine Hum / Silence
+- Use the Web Audio API to generate simple ambient tones (white noise via AudioContext, or use free public domain audio URLs from Freesound-compatible CDN)
+
+**Distraction Mode Banner (optional toggle):**
+- A soft banner that says "🔕 Focus Mode Active — Stay on course" 
+
+**On session complete:**
+- Full-screen "Landing" animation: "We have landed. Welcome to [Destination]. 🛬"
+- Show session summary card: time flown, miles covered (calculated from real geo distance if cities matched, else random 1000–9000km), focus type
+- Buttons: "Log this flight" → saves to logbook, "Book another flight" → `/book`
+
+---
+
+### 📒 PAGE 4 — LOGBOOK (`/logbook`)
+
+Styled like a pilot's leather-bound logbook or airline route map.
+
+**Stats Bar (top):**
+- Total Flights | Total Hours | Total Miles | Current Streak (days)
+- Animated count-up numbers on page load (Framer Motion)
+
+**World Route Map:**
+- SVG world map showing all saved flight routes as arcs
+- Each arc is a faint glowing line
+
+**Flight History Table / Cards:**
+- Show past sessions as boarding-pass style cards in a vertical list
+- Each card: Route, Date, Duration, Focus Type, Task Label, Miles
+- Filter buttons: All / Deep Work / Study / Creative / This Week / This Month
+
+**All data stored in `localStorage`** — no backend required.
+
+---
+
+### 🚆 PAGE 5 — TRAIN & BUS MODE (`/transit`)
+
+Same concept as flights but themed for ground transport. Gives users the option to pick a transit metaphor instead of aviation.
+
+**Mode Selector:**
+- Toggle between 🚆 Train and 🚌 Bus (changes the UI theme slightly)
+
+**Train Mode:**
+- "Departure Station" and "Arrival Station" inputs
+- Duration slider: 15 min – 3 hours, shown as "Journey time"
+- Quick route suggestions: `Chennai Central → Bangalore City`, `Mumbai CST → Pune`, `Delhi → Agra`, etc. (Indian railway style)
+- Live session screen shows: animated train moving along a straight track, stations listed with arrival progress
+- Ambient sounds: Train rhythmic clacking (Web Audio API oscillator pattern)
+
+**Bus Mode:**
+- Same structure but with bus stop styling
+- Quick routes: City center local bus routes
+- Session screen: Animated bus on a route map
+- Ambient sounds: City ambience
+
+**All transit sessions also log to the Logbook** with a 🚆 or 🚌 icon instead of ✈️
+
+---
+
+### ⚙️ PAGE 6 — SETTINGS (`/settings`)
+
+- **Default Focus Duration** — slider
+- **Default Focus Type** — selector
+- **Preferred Transport Mode** — Flight / Train / Bus
+- **Ambient Sound** — default sound preference
+- **Theme** — Dark (default) / Light toggle
+- **Clear Logbook** — with confirmation dialog
+- **About section** — "FocusFlight v1.0 — Your productivity co-pilot"
+
+---
+
+### 🧱 GLOBAL COMPONENTS
+
+Build these as reusable components:
+
+- `<Navbar />` — Fixed top nav with logo (✈ FocusFlight), links to all pages, active state highlight
+- `<BoardingPassCard />` — Reusable boarding pass UI card
+- `<TimerDisplay />` — HH:MM:SS countdown display
+- `<AmbientAudio />` — Web Audio API sound controller (hook: `useAmbientSound`)
+- `<SessionContext />` — React Context to pass session data between Book → Flight pages
+- `<StarField />` — CSS animated starfield background component
+- `<FlightArc />` — SVG arc with animated plane
+
+---
+
+### 💾 STATE MANAGEMENT
+
+- Use **React Context + useReducer** for session state
+- Use **localStorage** for logbook persistence (serialize/deserialize JSON)
+- No backend, no API keys needed — fully client-side
+
+---
+
+### 📦 DEPENDENCIES TO INSTALL
+
+```bash
+npm install react-router-dom framer-motion tailwindcss @tailwindcss/vite lucide-react
+```
+
+Configure Tailwind with the dark theme and custom colors in `tailwind.config.js`.
+
+---
+
+### 🔧 FILE STRUCTURE
+
+```
+src/
+├── components/
+│   ├── Navbar.jsx
+│   ├── BoardingPassCard.jsx
+│   ├── StarField.jsx
+│   ├── FlightArc.jsx
+│   ├── TimerDisplay.jsx
+│   └── AmbientAudio.jsx
+├── context/
+│   └── SessionContext.jsx
+├── hooks/
+│   ├── useTimer.js
+│   ├── useLogbook.js
+│   └── useAmbientSound.js
+├── pages/
+│   ├── Home.jsx
+│   ├── BookFlight.jsx
+│   ├── ActiveFlight.jsx
+│   ├── Logbook.jsx
+│   ├── TransitMode.jsx
+│   └── Settings.jsx
+├── utils/
+│   └── geoDistance.js
+├── App.jsx
+├── main.jsx
+└── index.css
+```
+
+---
+
+### ✅ FINAL CHECKLIST FOR THE AI
+
+Before finishing, make sure:
+- [ ] All 6 pages are implemented and routed correctly
+- [ ] The timer actually counts down and works
+- [ ] Session data passes from `/book` to `/flight` via context
+- [ ] Logbook saves and reads from localStorage correctly
+- [ ] Train and Bus mode both have working timer sessions
+- [ ] The world map SVG renders with an animated plane arc
+- [ ] Tailwind dark theme and custom colors are applied everywhere
+- [ ] Mobile responsive layout on all pages
+- [ ] No build errors — run `npm run build` to verify
+
+---
+
+> **Note for Replit Agent:** Build everything in sequence — set up routing first, then build each page one by one, then wire up the context and localStorage. Do not skip the Transit page — it is a core feature.

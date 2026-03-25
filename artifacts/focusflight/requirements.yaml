@@ -1,0 +1,17 @@
+packages:
+  "framer-motion": "For complex boarding sequences, smooth transitions, and immersive flight arc animations"
+  "date-fns": "For elegant date and time formatting in the logbook and active flight session"
+  "canvas-confetti": "For a celebratory landing animation when a focus session is completed"
+
+images:
+  - path: "artifacts/focusflight/public/images/hero-bg.png"
+    description: "Deep space navy background with subtle nebula clouds and glowing star clusters, dark aviation aesthetic, high quality"
+    aspect_ratio: "16:9"
+  - path: "artifacts/focusflight/public/images/cockpit-abstract.png"
+    description: "Abstract geometric glass cockpit dashboard glowing in the dark, ice blue and golden yellow accents, sleek modern ui background"
+    aspect_ratio: "16:9"
+
+notes:
+  - Entire app uses localStorage for state persistence (no external API needed)
+  - Web Audio API used for generative ambient sounds
+  - Heavy use of Framer Motion for immersive app flow
