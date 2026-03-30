@@ -137,6 +137,7 @@ export default function ActiveFlight() {
         onEarlyLanding={() => setShowExitConfirm(true)}
         onSoundChange={playSound}
         onMapThemeToggle={() => updateSettings({ mapTheme: settings.mapTheme === 'night' ? 'day' : 'night' })}
+        onPlaneIconChange={(icon) => updateSettings({ planeIcon: icon })}
       />
 
       {/* DESCENT ANNOUNCEMENTS */}

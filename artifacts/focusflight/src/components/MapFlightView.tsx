@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SessionConfig, formatTime } from '@/utils/flight-utils';
+import { SessionConfig, formatTime, PLANE_ICONS } from '@/utils/flight-utils';
 import { SoundType, SOUND_OPTIONS } from '@/hooks/use-ambient-sound';
 
 // ─── 20 major world airports ──────────────────────────────────────────────────
@@ -124,12 +124,13 @@ interface MapFlightViewProps {
   onEarlyLanding: () => void;
   onSoundChange: (s: SoundType) => void;
   onMapThemeToggle: () => void;
+  onPlaneIconChange: (icon: string) => void;
 }
 
 export function MapFlightView({
   session, timeLeft, progress, totalSeconds,
   isActive, flightStarted, currentSound, planeIcon, mapTheme,
-  onToggle, onStartFlight, onEarlyLanding, onSoundChange, onMapThemeToggle,
+  onToggle, onStartFlight, onEarlyLanding, onSoundChange, onMapThemeToggle, onPlaneIconChange,
 }: MapFlightViewProps) {
   const mapRef         = useRef<L.Map|null>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
@@ -152,6 +153,7 @@ export function MapFlightView({
   const [launching,      setLaunching]      = useState(false);
   const [routeReady,     setRouteReady]     = useState(false);
   const [showSoundPicker,setShowSoundPicker]= useState(false);
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [originCode,     setOriginCode]     = useState('');
   const [destCode,       setDestCode]       = useState('');
   const [destCity,       setDestCity]       = useState('');
@@ -515,9 +517,72 @@ export function MapFlightView({
               </button>
             )}
 
+            {/* Icon picker button */}
+            <button
+              onClick={() => { setShowSoundPicker(false); setShowIconPicker(v => !v); }}
+              title="Change flight icon"
+              style={{
+                ...BTN,
+                background: showIconPicker ? 'rgba(255,255,255,0.22)' : BTN.background,
+                marginTop: 4,
+                fontSize: 20,
+              }}
+            >
+              {planeIcon}
+            </button>
+
+            {/* Icon picker panel */}
+            <AnimatePresence>
+              {showIconPicker && (
+                <motion.div
+                  key="icon-panel"
+                  initial={{ opacity:0, scale:0.93, x:12 }}
+                  animate={{ opacity:1, scale:1, x:0 }}
+                  exit={{ opacity:0, scale:0.93, x:12 }}
+                  transition={{ duration:0.2 }}
+                  style={{
+                    ...GLASS, padding:'16px 14px',
+                    position:'absolute', top:0, right:56,
+                    width:232, borderRadius:16,
+                  }}
+                >
+                  <p style={{ fontSize:10, letterSpacing:3, color:'rgba(255,255,255,0.38)',
+                    textTransform:'uppercase', marginBottom:12, fontWeight:700 }}>
+                    Flight Icon
+                  </p>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:7 }}>
+                    {PLANE_ICONS.map(opt => {
+                      const active = planeIcon === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          title={opt.desc}
+                          onClick={() => { onPlaneIconChange(opt.id); setShowIconPicker(false); }}
+                          style={{
+                            display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+                            padding:'10px 4px 8px', borderRadius:11, cursor:'pointer',
+                            border: active ? '1.5px solid rgba(79,195,247,0.6)' : '1.5px solid transparent',
+                            background: active ? 'rgba(79,195,247,0.15)' : 'rgba(255,255,255,0.06)',
+                            transition:'all 0.14s',
+                          }}
+                        >
+                          <span style={{ fontSize:22, lineHeight:1 }}>{opt.id}</span>
+                          <span style={{ fontSize:9, fontWeight:700, letterSpacing:0.3,
+                            color: active ? '#4fc3f7' : 'rgba(255,255,255,0.5)',
+                            textAlign:'center', lineHeight:1.2 }}>
+                            {opt.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Sound button */}
             <button
-              onClick={() => setShowSoundPicker(v => !v)}
+              onClick={() => { setShowIconPicker(false); setShowSoundPicker(v => !v); }}
               style={{ ...BTN, background: (showSoundPicker || currentSound !== 'silence') ? 'rgba(255,255,255,0.22)' : BTN.background, marginTop:4 }}
               title="Ambient sounds"
             >
