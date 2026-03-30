@@ -2,94 +2,84 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, ArrowLeftRight } from 'lucide-react';
 import { useTimer } from '@/hooks/use-timer';
 import { useLogbook } from '@/hooks/use-storage';
 import { formatTime, generateIata, FocusType } from '@/utils/flight-utils';
 import confetti from 'canvas-confetti';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type Station = { name: string; city: string; lat: number; lng: number };
+type LatLng = [number, number];
+interface Route {
+  id: number;
+  name: string;
+  from: string;
+  to: string;
+  waypoints: LatLng[];
+  distance: number;
+  duration: number;
+}
 type RailPhase = 'picker' | 'platform' | 'active' | 'arriving' | 'arrived' | 'abandoned';
 type ArrivalStep = 'decelerating' | 'banner' | 'summary';
 
-/* ─── Station Data ───────────────────────────────────────────────────────── */
-const WORLD_STATIONS: Station[] = [
-  { name: 'London Waterloo', city: 'London', lat: 51.5033, lng: -0.1134 },
-  { name: 'Paris Gare du Nord', city: 'Paris', lat: 48.8809, lng: 2.3553 },
-  { name: 'Tokyo Shinjuku', city: 'Tokyo', lat: 35.6896, lng: 139.7006 },
-  { name: 'Mumbai CSMT', city: 'Mumbai', lat: 18.9399, lng: 72.8348 },
-  { name: 'New York Penn Station', city: 'New York', lat: 40.7505, lng: -73.9934 },
-  { name: 'Berlin Hauptbahnhof', city: 'Berlin', lat: 52.5252, lng: 13.3695 },
-  { name: 'Madrid Atocha', city: 'Madrid', lat: 40.4068, lng: -3.6899 },
-  { name: 'Rome Termini', city: 'Rome', lat: 41.9006, lng: 12.5012 },
-  { name: 'Moscow Yaroslavsky', city: 'Moscow', lat: 55.7753, lng: 37.6571 },
-  { name: 'Beijing West', city: 'Beijing', lat: 39.8947, lng: 116.2224 },
-  { name: 'Shanghai Hongqiao', city: 'Shanghai', lat: 31.1963, lng: 121.3269 },
-  { name: 'Seoul Station', city: 'Seoul', lat: 37.5546, lng: 126.9707 },
-  { name: 'Sydney Central', city: 'Sydney', lat: -33.8831, lng: 151.2063 },
-  { name: 'Toronto Union', city: 'Toronto', lat: 43.6455, lng: -79.3809 },
-  { name: 'Chicago Union Station', city: 'Chicago', lat: 41.8788, lng: -87.64 },
-  { name: 'Amsterdam Centraal', city: 'Amsterdam', lat: 52.3791, lng: 4.8997 },
-  { name: 'Vienna Hauptbahnhof', city: 'Vienna', lat: 48.1848, lng: 16.3784 },
-  { name: 'Zurich HB', city: 'Zurich', lat: 47.3779, lng: 8.5401 },
-  { name: 'Brussels Midi', city: 'Brussels', lat: 50.8355, lng: 4.3361 },
-  { name: 'Barcelona Sants', city: 'Barcelona', lat: 41.3793, lng: 2.1406 },
-  { name: 'Milan Centrale', city: 'Milan', lat: 45.4854, lng: 9.2045 },
-  { name: 'Frankfurt Hauptbahnhof', city: 'Frankfurt', lat: 50.107, lng: 8.6635 },
-  { name: 'New Delhi Station', city: 'Delhi', lat: 28.6425, lng: 77.2197 },
-  { name: 'KL Sentral', city: 'Kuala Lumpur', lat: 3.1334, lng: 101.6864 },
-  { name: 'Bangkok Hua Lamphong', city: 'Bangkok', lat: 13.74, lng: 100.517 },
-  { name: 'Cairo Ramses', city: 'Cairo', lat: 30.0605, lng: 31.2511 },
-  { name: 'Johannesburg Park Station', city: 'Johannesburg', lat: -26.1953, lng: 28.0376 },
-  { name: 'Buenos Aires Retiro', city: 'Buenos Aires', lat: -34.5824, lng: -58.3731 },
-  { name: 'São Paulo Luz', city: 'São Paulo', lat: -23.5353, lng: -46.6397 },
-  { name: 'Singapore Woodlands', city: 'Singapore', lat: 1.4319, lng: 103.7861 },
+/* ─── Hardcoded Routes ───────────────────────────────────────────────────── */
+const ROUTES: Route[] = [
+  {"id":1,"name":"🇬🇧 London → Edinburgh","from":"London Kings Cross","to":"Edinburgh Waverley","waypoints":[[51.5322,-0.1235],[52.9548,-1.1581],[53.4808,-2.2426],[54.9783,-1.6178],[55.9521,-3.1895]],"distance":633,"duration":270},
+  {"id":2,"name":"🇫🇷 Paris → Marseille","from":"Paris Gare de Lyon","to":"Marseille Saint-Charles","waypoints":[[48.8448,2.3735],[46.1512,4.7966],[45.7640,4.8357],[43.2965,5.3813]],"distance":775,"duration":195},
+  {"id":3,"name":"🇯🇵 Tokyo → Osaka","from":"Tokyo Station","to":"Osaka Station","waypoints":[[35.6812,139.7671],[35.1815,136.9066],[34.7024,135.4959]],"distance":513,"duration":145},
+  {"id":4,"name":"🇮🇳 Mumbai → Delhi","from":"Mumbai CST","to":"New Delhi Station","waypoints":[[18.9398,72.8355],[21.1458,79.0882],[23.1765,79.9462],[26.4499,80.3319],[28.6419,77.2194]],"distance":1384,"duration":960},
+  {"id":5,"name":"🇺🇸 New York → Washington DC","from":"Penn Station NY","to":"Union Station DC","waypoints":[[40.7506,-74.0023],[39.9526,-75.1652],[39.3498,-76.6413],[38.8977,-77.0063]],"distance":362,"duration":165},
+  {"id":6,"name":"🇩🇪 Berlin → Munich","from":"Berlin Hauptbahnhof","to":"Munich Hauptbahnhof","waypoints":[[52.5251,13.3694],[51.3397,12.3731],[48.9957,12.1151],[48.1402,11.5580]],"distance":585,"duration":240},
+  {"id":7,"name":"🇨🇳 Beijing → Shanghai","from":"Beijing South","to":"Shanghai Hongqiao","waypoints":[[39.8654,116.3783],[36.6512,117.1201],[34.2674,117.1950],[31.1934,121.3237]],"distance":1318,"duration":270},
+  {"id":8,"name":"🇪🇸 Madrid → Barcelona","from":"Madrid Atocha","to":"Barcelona Sants","waypoints":[[40.4065,-3.6914],[41.3851,2.1734]],"distance":621,"duration":165},
+  {"id":9,"name":"🇮🇹 Rome → Milan","from":"Roma Termini","to":"Milano Centrale","waypoints":[[41.9009,12.5011],[43.7696,11.2558],[44.4056,8.9463],[45.4862,9.2045]],"distance":575,"duration":175},
+  {"id":10,"name":"🇷🇺 Moscow → St Petersburg","from":"Moscow Leningradsky","to":"St Petersburg Moskovsky","waypoints":[[55.7765,37.6554],[57.9661,32.9598],[59.9311,30.3609]],"distance":650,"duration":240},
+  {"id":11,"name":"🇦🇺 Sydney → Melbourne","from":"Sydney Central","to":"Melbourne Southern Cross","waypoints":[[-33.8833,151.2056],[-34.9285,138.6007],[-37.8183,144.9671]],"distance":878,"duration":660},
+  {"id":12,"name":"🇨🇦 Toronto → Montreal","from":"Toronto Union","to":"Montreal Central","waypoints":[[43.6453,-79.3806],[44.2334,-76.4819],[45.5017,-73.5673]],"distance":541,"duration":300},
+  {"id":13,"name":"🇧🇷 São Paulo → Rio","from":"São Paulo Luz","to":"Rio Central","waypoints":[[-23.5329,-46.6395],[-22.9068,-43.1729]],"distance":429,"duration":360},
+  {"id":14,"name":"🇳🇱 Amsterdam → Paris","from":"Amsterdam Centraal","to":"Paris Nord","waypoints":[[52.3791,4.9003],[51.2194,4.4025],[50.6292,3.0573],[48.8809,2.3553]],"distance":514,"duration":195},
+  {"id":15,"name":"🇨🇭 Zurich → Geneva","from":"Zurich HB","to":"Geneva Cornavin","waypoints":[[47.3783,8.5403],[46.9480,7.4474],[46.2044,6.1432]],"distance":288,"duration":170},
+  {"id":16,"name":"🇯🇵 Tokyo → Sapporo","from":"Tokyo Station","to":"Sapporo Station","waypoints":[[35.6812,139.7671],[37.9026,140.8765],[41.7688,140.7288],[43.0618,141.3545]],"distance":1035,"duration":480},
+  {"id":17,"name":"🇰🇷 Seoul → Busan","from":"Seoul Station","to":"Busan Station","waypoints":[[37.5547,126.9707],[36.3504,127.3845],[35.1796,129.0756]],"distance":325,"duration":150},
+  {"id":18,"name":"🇿🇦 Johannesburg → Cape Town","from":"Park Station JHB","to":"Cape Town Station","waypoints":[[-26.2041,28.0473],[-29.1210,26.2140],[-33.9249,18.4241]],"distance":1547,"duration":1680},
+  {"id":19,"name":"🇲🇽 Mexico City → Guadalajara","from":"Buenavista CDMX","to":"Guadalajara Station","waypoints":[[19.4517,-99.1453],[20.5888,-100.3899],[20.6597,-103.3496]],"distance":539,"duration":360},
+  {"id":20,"name":"🇸🇪 Stockholm → Oslo","from":"Stockholm Central","to":"Oslo Central","waypoints":[[59.3304,18.0582],[59.6099,16.5448],[59.9139,10.7522]],"distance":521,"duration":360},
 ];
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
-function haversineKm(a: Station, b: Station): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(h));
+/* ─── Waypoint interpolation ─────────────────────────────────────────────── */
+function waypointAt(waypoints: LatLng[], progress: number): LatLng {
+  if (waypoints.length === 1) return waypoints[0];
+  if (progress <= 0) return waypoints[0];
+  if (progress >= 100) return waypoints[waypoints.length - 1];
+
+  const segLens: number[] = [];
+  let total = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const dlat = waypoints[i + 1][0] - waypoints[i][0];
+    const dlng = waypoints[i + 1][1] - waypoints[i][1];
+    const len = Math.sqrt(dlat * dlat + dlng * dlng);
+    segLens.push(len);
+    total += len;
+  }
+
+  const target = (progress / 100) * total;
+  let acc = 0;
+  for (let i = 0; i < segLens.length; i++) {
+    if (acc + segLens[i] >= target) {
+      const t = segLens[i] === 0 ? 0 : (target - acc) / segLens[i];
+      const a = waypoints[i];
+      const b = waypoints[i + 1];
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    }
+    acc += segLens[i];
+  }
+  return waypoints[waypoints.length - 1];
 }
 
-async function fetchStations(city: string): Promise<Station[]> {
-  try {
-    const geoRes = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
-    const geoData = await geoRes.json();
-    if (!geoData.length) throw new Error('no-geo');
-    const { lat, lon } = geoData[0];
-    const q = `[out:json];node["railway"="station"](around:20000,${lat},${lon});out body 8;`;
-    const ovRes = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-    const ovData = await ovRes.json();
-    const results: Station[] = ovData.elements
-      .filter((el: any) => el.tags?.name)
-      .map((el: any) => ({
-        name: el.tags.name as string,
-        city: (el.tags['addr:city'] as string) || city,
-        lat: el.lat as number,
-        lng: el.lon as number,
-      }))
-      .slice(0, 6);
-    if (results.length) return results;
-    throw new Error('empty');
-  } catch {
-    const q = city.toLowerCase();
-    const fallback = WORLD_STATIONS.filter(
-      s => s.city.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
-    ).slice(0, 5);
-    return fallback.length ? fallback : WORLD_STATIONS.slice(0, 5);
-  }
+function fmtDuration(mins: number): string {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 function generateTrainNumber(): string {
@@ -102,7 +92,6 @@ const FLIP_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789·-: ';
 function FlipChar({ finalChar, delay }: { finalChar: string; delay: number }) {
   const [current, setCurrent] = useState('·');
   const [active, setActive] = useState(false);
-
   useEffect(() => {
     const t = setTimeout(() => {
       let count = 0;
@@ -122,536 +111,376 @@ function FlipChar({ finalChar, delay }: { finalChar: string; delay: number }) {
     }, delay);
     return () => clearTimeout(t);
   }, [finalChar, delay]);
-
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        minWidth: finalChar === ' ' ? '0.35em' : '0.65em',
-        textAlign: 'center',
-        color: active ? '#f59e0b' : '#ffffff',
-        transition: 'color 0.04s',
-        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-        fontWeight: 700,
-      }}
-    >
+    <span style={{
+      display: 'inline-block', minWidth: finalChar === ' ' ? '0.35em' : '0.65em',
+      textAlign: 'center', color: active ? '#f59e0b' : '#ffffff', transition: 'color 0.04s',
+      fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontWeight: 700,
+    }}>
       {current === ' ' ? '\u00A0' : current}
     </span>
   );
 }
 
-function FlipText({ text, startDelay = 0, upper = true }: { text: string; startDelay?: number; upper?: boolean }) {
-  const normalized = upper ? text.toUpperCase() : text;
+function FlipText({ text, startDelay = 0 }: { text: string; startDelay?: number }) {
   return (
-    <>
-      {normalized.split('').map((ch, i) => (
-        <FlipChar key={i} finalChar={ch} delay={startDelay + i * 45} />
-      ))}
-    </>
+    <>{text.toUpperCase().split('').map((ch, i) => (
+      <FlipChar key={i} finalChar={ch} delay={startDelay + i * 45} />
+    ))}</>
   );
 }
 
-/* ─── Departure Board Row ─────────────────────────────────────────────────── */
-function BoardRow({
-  label,
-  value,
-  amber = false,
-  flipDelay = 0,
-  large = false,
-}: {
-  label: string;
-  value: string;
-  amber?: boolean;
-  flipDelay?: number;
-  large?: boolean;
+function BoardRow({ label, value, amber = false, flipDelay = 0, large = false }: {
+  label: string; value: string; amber?: boolean; flipDelay?: number; large?: boolean;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 20,
-        padding: '10px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}
-    >
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 2,
-          color: 'rgba(255,255,255,0.3)',
-          textTransform: 'uppercase',
-          minWidth: 90,
-          fontFamily: "'JetBrains Mono', monospace",
-          flexShrink: 0,
-        }}
-      >
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', minWidth: 90, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
         {label}
       </span>
-      <span
-        style={{
-          fontSize: large ? 22 : 17,
-          color: amber ? '#f59e0b' : '#ffffff',
-          fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-          fontWeight: 700,
-          letterSpacing: large ? 2 : 1,
-        }}
-      >
+      <span style={{ fontSize: large ? 22 : 17, color: amber ? '#f59e0b' : '#ffffff', fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontWeight: 700, letterSpacing: large ? 2 : 1 }}>
         <FlipText text={value} startDelay={flipDelay} />
       </span>
     </div>
   );
 }
 
+function BoardingBadge() {
+  const [lit, setLit] = useState(true);
+  useEffect(() => {
+    const iv = setInterval(() => setLit(v => !v), 800);
+    return () => clearInterval(iv);
+  }, []);
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 900, letterSpacing: 2, fontFamily: "'JetBrains Mono', monospace",
+      color: lit ? '#f59e0b' : 'rgba(245,158,11,0.3)', transition: 'color 0.3s', textTransform: 'uppercase',
+      padding: '4px 10px', borderRadius: 6,
+      background: lit ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.04)',
+      border: `1px solid ${lit ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.1)'}`,
+    }}>● BOARDING</span>
+  );
+}
+
 /* ─── Shared Styles ──────────────────────────────────────────────────────── */
 const GLASS: React.CSSProperties = {
-  background: 'rgba(8,10,20,0.82)',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-  border: '1px solid rgba(255,255,255,0.11)',
-  borderRadius: 18,
-  color: 'white',
+  background: 'rgba(8,10,20,0.82)', backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.11)',
+  borderRadius: 18, color: 'white',
 };
-
 const GREEN = '#30D158';
 const FOCUS_TYPES: FocusType[] = ['Deep Work', 'Study', 'Creative', 'Meeting', 'Reading'];
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
-interface RailFocusViewProps {
-  onEnd: () => void;
-}
-
-export function RailFocusView({ onEnd }: RailFocusViewProps) {
-  /* Picker state */
-  const [depQuery, setDepQuery] = useState('');
-  const [arrQuery, setArrQuery] = useState('');
-  const [depResults, setDepResults] = useState<Station[]>([]);
-  const [arrResults, setArrResults] = useState<Station[]>([]);
-  const [depStation, setDepStation] = useState<Station | null>(null);
-  const [arrStation, setArrStation] = useState<Station | null>(null);
-  const [isSearchingDep, setIsSearchingDep] = useState(false);
-  const [isSearchingArr, setIsSearchingArr] = useState(false);
+export function RailFocusView({ onEnd }: { onEnd: () => void }) {
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [duration, setDuration] = useState(45);
   const [focusType, setFocusType] = useState<FocusType>('Deep Work');
-
-  /* Session state */
   const [phase, setPhase] = useState<RailPhase>('picker');
   const [trainNumber, setTrainNumber] = useState('RF-0000');
   const [arrivalStep, setArrivalStep] = useState<ArrivalStep>('decelerating');
   const [showExit, setShowExit] = useState(false);
-
-  /* Abandon snapshot */
   const [abandonProgress, setAbandonProgress] = useState(0);
   const [abandonTimeLeft, setAbandonTimeLeft] = useState(0);
 
-  /* Refs */
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const depRef = useRef(depStation);
-  const arrRef = useRef(arrStation);
+  const routeRef = useRef(selectedRoute);
   const pauseStartRef = useRef<number | null>(null);
   const totalPausedMsRef = useRef(0);
-
-  useEffect(() => { depRef.current = depStation; }, [depStation]);
-  useEffect(() => { arrRef.current = arrStation; }, [arrStation]);
+  useEffect(() => { routeRef.current = selectedRoute; }, [selectedRoute]);
 
   const { addLog } = useLogbook();
 
-  const totalDistKm = depStation && arrStation ? haversineKm(depStation, arrStation) : 0;
-
   /* ── Timer ── */
   const handleComplete = useCallback(() => {
-    const dep = depRef.current;
-    const arr = arrRef.current;
-    if (!dep || !arr) return;
+    const route = routeRef.current;
+    if (!route) return;
     setPhase('arriving');
     setArrivalStep('decelerating');
-    /* Slow pan to arrival station */
     setTimeout(() => {
-      if (mapRef.current && arr) {
-        mapRef.current.panTo([arr.lat, arr.lng], { animate: true, duration: 4 } as any);
+      if (mapRef.current) {
+        const dest = route.waypoints[route.waypoints.length - 1];
+        mapRef.current.panTo(dest, { animate: true, duration: 4 } as any);
       }
     }, 100);
-    /* Banner after 4s, summary after 6s */
     setTimeout(() => setArrivalStep('banner'), 4200);
     setTimeout(() => {
       setArrivalStep('summary');
       confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 }, colors: ['#30D158', '#ffd54f', '#ffffff'] });
       addLog({
-        id: Date.now().toString(),
-        mode: 'railfocus',
-        from: dep.name,
-        to: arr.name,
-        fromCode: generateIata(dep.name),
-        toCode: generateIata(arr.name),
-        durationMinutes: duration,
-        focusType,
-        label: '',
-        date: new Date().toISOString(),
-        distance: Math.round(haversineKm(dep, arr)),
-        completed: true,
+        id: Date.now().toString(), mode: 'railfocus',
+        from: route.from, to: route.to,
+        fromCode: generateIata(route.from), toCode: generateIata(route.to),
+        durationMinutes: duration, focusType, label: '',
+        date: new Date().toISOString(), distance: route.distance, completed: true,
       });
     }, 6300);
   }, [duration, focusType, addLog]);
 
   const { timeLeft, isActive, toggle, progress } = useTimer(duration, handleComplete);
 
-  /* Track paused time for focus score */
   useEffect(() => {
-    if (!isActive && phase === 'active') {
-      pauseStartRef.current = Date.now();
-    } else if (isActive && pauseStartRef.current !== null) {
+    if (!isActive && phase === 'active') { pauseStartRef.current = Date.now(); }
+    else if (isActive && pauseStartRef.current !== null) {
       totalPausedMsRef.current += Date.now() - pauseStartRef.current;
       pauseStartRef.current = null;
     }
   }, [isActive, phase]);
 
-  /* Auto-start timer when active phase begins */
   useEffect(() => {
     if (phase === 'active' && !isActive) toggle();
   }, [phase]);
 
-  /* ── Leaflet setup ── */
+  /* ── Map setup ── */
   useEffect(() => {
-    if ((phase !== 'active' && phase !== 'arriving') || !mapContainerRef.current || !depStation || !arrStation) return;
+    if ((phase !== 'active' && phase !== 'arriving') || !mapContainerRef.current || !selectedRoute) return;
     if (mapRef.current) return;
-    const midLat = (depStation.lat + arrStation.lat) / 2;
-    const midLng = (depStation.lng + arrStation.lng) / 2;
+
+    const dep = selectedRoute.waypoints[0];
     const map = L.map(mapContainerRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      touchZoom: false,
-      keyboard: false,
+      zoomControl: false, attributionControl: false,
+      dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+      touchZoom: false, keyboard: false,
     });
-    map.setView([depStation.lat, depStation.lng], 14);
+    map.setView(dep, 14);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     L.tileLayer('https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', { maxZoom: 19, opacity: 0.85 }).addTo(map);
+
+    /* Route polyline */
+    L.polyline(selectedRoute.waypoints, {
+      color: GREEN, weight: 3, opacity: 0.55, dashArray: '8 6',
+    }).addTo(map);
+
+    /* Departure marker */
+    const depIcon = L.divIcon({
+      html: `<div style="width:10px;height:10px;border-radius:50%;background:${GREEN};border:2px solid white;box-shadow:0 0 8px ${GREEN}"></div>`,
+      className: '', iconAnchor: [5, 5],
+    });
+    const arrIcon = L.divIcon({
+      html: `<div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 8px #f59e0b"></div>`,
+      className: '', iconAnchor: [5, 5],
+    });
+    L.marker(dep, { icon: depIcon }).addTo(map);
+    L.marker(selectedRoute.waypoints[selectedRoute.waypoints.length - 1], { icon: arrIcon }).addTo(map);
+
     mapRef.current = map;
-    /* Pan from midpoint to start position */
-    setTimeout(() => map.setView([midLat, midLng], 14, { animate: false }), 10);
     return () => { map.remove(); mapRef.current = null; };
   }, [phase]);
 
-  /* ── Pan map during session ── */
+  /* ── Pan map following waypoints ── */
   useEffect(() => {
-    if (phase !== 'active' || !mapRef.current || !depStation || !arrStation) return;
-    const t = progress / 100;
-    const lat = depStation.lat + (arrStation.lat - depStation.lat) * t;
-    const lng = depStation.lng + (arrStation.lng - depStation.lng) * t;
-    mapRef.current.setView([lat, lng], 14, { animate: true, duration: 1.5 } as any);
+    if (phase !== 'active' || !mapRef.current || !selectedRoute) return;
+    const pos = waypointAt(selectedRoute.waypoints, progress);
+    mapRef.current.setView(pos, 14, { animate: true, duration: 1.5 } as any);
   }, [progress, phase]);
 
-  /* ── Station Search ── */
-  const handleSearch = async (which: 'dep' | 'arr') => {
-    const query = which === 'dep' ? depQuery : arrQuery;
-    if (!query.trim()) return;
-    if (which === 'dep') { setIsSearchingDep(true); setDepResults([]); }
-    else { setIsSearchingArr(true); setArrResults([]); }
-    const results = await fetchStations(query);
-    if (which === 'dep') { setDepResults(results); setIsSearchingDep(false); }
-    else { setArrResults(results); setIsSearchingArr(false); }
-  };
-
-  const handleSwap = () => {
-    const d = depStation; const a = arrStation;
-    setDepStation(a); setArrStation(d);
-    setDepQuery(a?.name || ''); setArrQuery(d?.name || '');
-    setDepResults([]); setArrResults([]);
-  };
-
   const handleBoardFromPicker = () => {
-    if (!depStation || !arrStation) return;
+    if (!selectedRoute) return;
     setTrainNumber(generateTrainNumber());
     setPhase('platform');
   };
 
-  const handleBoardFromPlatform = () => {
-    setPhase('active');
-  };
-
   const handleAbandon = () => {
+    const route = routeRef.current;
     setAbandonProgress(progress);
     setAbandonTimeLeft(timeLeft);
-    const dep = depRef.current;
-    const arr = arrRef.current;
-    if (dep && arr) {
+    if (route) {
       addLog({
-        id: Date.now().toString(),
-        mode: 'railfocus',
-        from: dep.name,
-        to: arr.name,
-        fromCode: generateIata(dep.name),
-        toCode: generateIata(arr.name),
-        durationMinutes: Math.round((duration * 60 - timeLeft) / 60),
-        focusType,
-        label: '',
+        id: Date.now().toString(), mode: 'railfocus',
+        from: route.from, to: route.to,
+        fromCode: generateIata(route.from), toCode: generateIata(route.to),
+        durationMinutes: Math.round((duration * 60 - timeLeft) / 60), focusType, label: '',
         date: new Date().toISOString(),
-        distance: Math.round(haversineKm(dep, arr) * progress / 100),
-        completed: false,
+        distance: Math.round(route.distance * progress / 100), completed: false,
       });
     }
     setPhase('abandoned');
     setShowExit(false);
   };
 
-  /* ─── PHASE: PICKER ──────────────────────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  /* PHASE: PICKER                                                           */
+  /* ═══════════════════════════════════════════════════════════════════════ */
   if (phase === 'picker') {
     return (
       <div className="min-h-[calc(100vh-4rem)] pt-20 pb-24 px-4">
-        <main className="max-w-2xl mx-auto space-y-8">
+        <main className="max-w-3xl mx-auto space-y-8">
+
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">🚂 RailFocus</h2>
-            <p className="text-muted-foreground">Live train maps powered by OpenRailwayMap. Your session rides real tracks.</p>
+            <p className="text-muted-foreground">
+              Choose one of 20 iconic rail routes. Your session follows real geographic waypoints on the map.
+            </p>
           </div>
 
-          <div className="bg-card/50 border border-white/10 rounded-2xl p-6 space-y-5">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <MapPin className="w-4 h-4" /> Station Search
+          {/* Route grid */}
+          <div>
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              Select a Route — {ROUTES.length} iconic journeys
             </h3>
-
-            {/* Departure */}
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Departure City or Station</label>
-              <div className="flex gap-2">
-                <input
-                  value={depQuery}
-                  onChange={e => { setDepQuery(e.target.value); setDepStation(null); setDepResults([]); }}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch('dep')}
-                  placeholder="e.g. London, Mumbai, Tokyo…"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
-                />
-                <button
-                  onClick={() => handleSearch('dep')}
-                  disabled={isSearchingDep || !depQuery.trim()}
-                  className="px-4 py-3 rounded-xl bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors flex items-center gap-2 disabled:opacity-40"
-                >
-                  <Search className="w-4 h-4" />
-                  {isSearchingDep ? '…' : 'Find'}
-                </button>
-              </div>
-              {depStation && (
-                <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-primary/10 border border-primary/30">
-                  <span style={{ color: GREEN, fontWeight: 700 }}>✓</span>
-                  <span className="text-white font-medium">{depStation.name}</span>
-                  <span className="text-muted-foreground">— {depStation.city}</span>
-                </div>
-              )}
-              {depResults.length > 0 && !depStation && (
-                <div className="space-y-1 mt-1">
-                  {depResults.map((s, i) => (
-                    <button key={i} onClick={() => { setDepStation(s); setDepResults([]); setDepQuery(s.name); }}
-                      className="w-full text-left px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/10 transition-colors text-sm">
-                      <span className="text-white font-medium">{s.name}</span>
-                      <span className="text-muted-foreground ml-2 text-xs">{s.city}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-center">
-              <button onClick={handleSwap} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors" title="Swap">
-                <ArrowLeftRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-
-            {/* Arrival */}
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Arrival City or Station</label>
-              <div className="flex gap-2">
-                <input
-                  value={arrQuery}
-                  onChange={e => { setArrQuery(e.target.value); setArrStation(null); setArrResults([]); }}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch('arr')}
-                  placeholder="e.g. Paris, Berlin, Seoul…"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
-                />
-                <button
-                  onClick={() => handleSearch('arr')}
-                  disabled={isSearchingArr || !arrQuery.trim()}
-                  className="px-4 py-3 rounded-xl bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors flex items-center gap-2 disabled:opacity-40"
-                >
-                  <Search className="w-4 h-4" />
-                  {isSearchingArr ? '…' : 'Find'}
-                </button>
-              </div>
-              {arrStation && (
-                <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-primary/10 border border-primary/30">
-                  <span style={{ color: GREEN, fontWeight: 700 }}>✓</span>
-                  <span className="text-white font-medium">{arrStation.name}</span>
-                  <span className="text-muted-foreground">— {arrStation.city}</span>
-                </div>
-              )}
-              {arrResults.length > 0 && !arrStation && (
-                <div className="space-y-1 mt-1">
-                  {arrResults.map((s, i) => (
-                    <button key={i} onClick={() => { setArrStation(s); setArrResults([]); setArrQuery(s.name); }}
-                      className="w-full text-left px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/10 transition-colors text-sm">
-                      <span className="text-white font-medium">{s.name}</span>
-                      <span className="text-muted-foreground ml-2 text-xs">{s.city}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <AnimatePresence>
-              {depStation && arrStation && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="p-4 rounded-xl border flex items-center justify-between"
-                  style={{ background: 'rgba(48,209,88,0.08)', borderColor: 'rgba(48,209,88,0.25)' }}>
-                  <div className="text-sm">
-                    <div className="text-white font-bold">{depStation.name} → {arrStation.name}</div>
-                    <div className="text-muted-foreground mt-0.5">{Math.round(totalDistKm).toLocaleString()} km · {duration}m session</div>
-                  </div>
-                  <span className="text-3xl ml-4">🚂</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Journey Config */}
-          <div className="bg-card/50 border border-white/10 rounded-2xl p-6 space-y-5">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
-              Journey Configuration
-            </h3>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm text-white">Session Duration</span>
-                <span className="text-sm font-bold text-primary">
-                  {duration >= 60 ? `${Math.floor(duration / 60)}h ${duration % 60}m` : `${duration}m`}
-                </span>
-              </div>
-              <input type="range" min={15} max={180} step={5} value={duration}
-                onChange={e => setDuration(Number(e.target.value))} className="w-full accent-primary" />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>15m</span><span>3h</span>
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-white mb-3">Focus Type</div>
-              <div className="flex flex-wrap gap-2">
-                {FOCUS_TYPES.map(type => (
-                  <button key={type} onClick={() => setFocusType(type)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${focusType === type ? 'bg-primary text-background' : 'bg-white/5 border border-white/10 text-muted-foreground hover:text-white'}`}>
-                    {type}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {ROUTES.map(route => {
+                const active = selectedRoute?.id === route.id;
+                return (
+                  <button
+                    key={route.id}
+                    onClick={() => {
+                      setSelectedRoute(route);
+                      setDuration(Math.min(180, Math.max(25, Math.round(route.duration / 4 / 5) * 5)));
+                    }}
+                    style={{
+                      textAlign: 'left', padding: '14px 16px', borderRadius: 16,
+                      background: active ? 'rgba(48,209,88,0.1)' : 'rgba(255,255,255,0.03)',
+                      border: `1.5px solid ${active ? 'rgba(48,209,88,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      boxShadow: active ? `0 0 20px rgba(48,209,88,0.12)` : 'none',
+                      position: 'relative',
+                    }}
+                  >
+                    {active && (
+                      <span style={{
+                        position: 'absolute', top: 10, right: 12,
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: GREEN, boxShadow: `0 0 6px ${GREEN}`,
+                      }} />
+                    )}
+                    {/* Route name */}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: active ? GREEN : 'white', marginBottom: 5, lineHeight: 1.3 }}>
+                      {route.name}
+                    </div>
+                    {/* From → To */}
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 8, lineHeight: 1.4 }}>
+                      {route.from}
+                      <span style={{ margin: '0 5px', color: 'rgba(255,255,255,0.25)' }}>→</span>
+                      {route.to}
+                    </div>
+                    {/* Chips */}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(48,209,88,0.12)', color: GREEN, border: '1px solid rgba(48,209,88,0.2)' }}>
+                        {route.distance.toLocaleString()} km
+                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
+                        ≈{fmtDuration(route.duration)} real
+                      </span>
+                    </div>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Quick fill */}
-          <div className="space-y-2">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider">Quick-fill departure</div>
-            <div className="flex flex-wrap gap-2">
-              {WORLD_STATIONS.slice(0, 12).map((s, i) => (
-                <button key={i} onClick={() => { setDepStation(s); setDepQuery(s.name); setDepResults([]); }}
-                  className="px-3 py-1.5 rounded-full border border-white/10 text-xs text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors">
-                  {s.name}
+          {/* Session config */}
+          <AnimatePresence>
+            {selectedRoute && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+
+                {/* Route summary banner */}
+                <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(48,209,88,0.08)', border: '1px solid rgba(48,209,88,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>{selectedRoute.name}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                      {selectedRoute.distance.toLocaleString()} km · {selectedRoute.waypoints.length} waypoints
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 32 }}>🚂</span>
+                </div>
+
+                <div className="bg-card/50 border border-white/10 rounded-2xl p-6 space-y-6">
+                  {/* Duration */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-white">Session Duration</span>
+                      <span className="text-sm font-bold text-primary">
+                        {duration >= 60 ? `${Math.floor(duration / 60)}h ${duration % 60}m` : `${duration}m`}
+                      </span>
+                    </div>
+                    <input type="range" min={15} max={180} step={5} value={duration}
+                      onChange={e => setDuration(Number(e.target.value))} className="w-full accent-primary" />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>15m</span><span>3h</span>
+                    </div>
+                  </div>
+
+                  {/* Focus Type */}
+                  <div>
+                    <div className="text-sm text-white mb-3">Focus Type</div>
+                    <div className="flex flex-wrap gap-2">
+                      {FOCUS_TYPES.map(type => (
+                        <button key={type} onClick={() => setFocusType(type)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${focusType === type ? 'bg-primary text-background' : 'bg-white/5 border border-white/10 text-muted-foreground hover:text-white'}`}>
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={handleBoardFromPicker}
+                  className="w-full mt-4 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 text-background hover:opacity-90 transition-all"
+                  style={{ background: GREEN, boxShadow: `0 0 30px rgba(48,209,88,0.3)` }}>
+                  🚂 Board Train
                 </button>
-              ))}
-            </div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <button onClick={handleBoardFromPicker} disabled={!depStation || !arrStation}
-            className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all text-background hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: depStation && arrStation ? GREEN : 'rgba(255,255,255,0.15)' }}>
-            🚂 Board Train
-          </button>
         </main>
       </div>
     );
   }
 
-  /* ─── PHASE: PLATFORM (Departure Board) ─────────────────────────────────── */
-  if (phase === 'platform') {
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  /* PHASE: PLATFORM (Solari Departure Board)                               */
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  if (phase === 'platform' && selectedRoute) {
     const durationLabel = duration >= 60
       ? `${Math.floor(duration / 60)}H ${String(duration % 60).padStart(2, '0')}M`
       : `${String(duration).padStart(2, '0')}M`;
-    const depName = (depStation?.name || '').toUpperCase().substring(0, 20);
-    const arrName = (arrStation?.name || '').toUpperCase().substring(0, 20);
 
     return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 8000,
-        background: '#06080d',
+        position: 'fixed', inset: 0, zIndex: 8000, background: '#06080d',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'JetBrains Mono', 'Courier New', monospace",
       }}>
-        {/* Scanlines overlay */}
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)',
-        }} />
+        {/* CRT scanlines */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)' }} />
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
           style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 640, padding: '0 24px' }}
         >
-          {/* Board header */}
-          <div style={{
-            background: '#0d1117',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 16,
-            overflow: 'hidden',
-            boxShadow: '0 0 80px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.6)',
-          }}>
+          <div style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 0 80px rgba(0,0,0,0.8)' }}>
             {/* Header strip */}
-            <div style={{
-              background: '#111827',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
-              padding: '14px 28px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
+            <div style={{ background: '#111827', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 11, letterSpacing: 4, color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>
                 ◈ Departures
               </span>
               <BoardingBadge />
             </div>
 
-            {/* Board rows */}
             <div style={{ padding: '8px 28px 28px' }}>
-              <BoardRow label="Train" value={trainNumber} large flipDelay={200} />
-              <BoardRow label="From" value={depName} flipDelay={600} />
-              <BoardRow label="To" value={arrName} flipDelay={900} />
-              <BoardRow label="Journey" value={durationLabel} flipDelay={1300} />
-              <BoardRow label="Dist" value={`${Math.round(totalDistKm)} KM`} flipDelay={1550} />
-              <BoardRow label="Status" value="BOARDING" amber flipDelay={1800} />
+              <BoardRow label="Train"    value={trainNumber}                     large flipDelay={200} />
+              <BoardRow label="From"     value={selectedRoute.from.substring(0, 22).toUpperCase()} flipDelay={600} />
+              <BoardRow label="To"       value={selectedRoute.to.substring(0, 22).toUpperCase()}   flipDelay={900} />
+              <BoardRow label="Session"  value={durationLabel}                    flipDelay={1300} />
+              <BoardRow label="Distance" value={`${selectedRoute.distance} KM`}   flipDelay={1550} />
+              <BoardRow label="Status"   value="BOARDING"        amber            flipDelay={1800} />
             </div>
           </div>
 
-          {/* Board Train button */}
           <motion.button
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 2.5, duration: 0.5 }}
-            onClick={handleBoardFromPlatform}
+            onClick={() => setPhase('active')}
             style={{
-              marginTop: 28,
-              width: '100%',
-              padding: '18px 0',
-              borderRadius: 14,
-              background: GREEN,
-              border: 'none',
-              color: '#000',
-              fontSize: 17,
-              fontWeight: 900,
-              letterSpacing: 1,
-              cursor: 'pointer',
-              fontFamily: "'JetBrains Mono', monospace",
-              boxShadow: `0 0 30px rgba(48,209,88,0.35)`,
+              marginTop: 28, width: '100%', padding: '18px 0', borderRadius: 14,
+              background: GREEN, border: 'none', color: '#000', fontSize: 17,
+              fontWeight: 900, letterSpacing: 1, cursor: 'pointer',
+              fontFamily: "'JetBrains Mono', monospace", boxShadow: `0 0 30px rgba(48,209,88,0.35)`,
             }}
             whileHover={{ scale: 1.02, boxShadow: `0 0 50px rgba(48,209,88,0.5)` }}
             whileTap={{ scale: 0.98 }}
@@ -661,56 +490,37 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
 
           <button
             onClick={() => setPhase('picker')}
-            style={{
-              marginTop: 12, width: '100%', padding: '12px 0', background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
-              color: 'rgba(255,255,255,0.4)', fontSize: 13, cursor: 'pointer',
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
+            style={{ marginTop: 12, width: '100%', padding: '12px 0', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: 'rgba(255,255,255,0.4)', fontSize: 13, cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}
           >
-            ← Back to Stations
+            ← Back to Routes
           </button>
         </motion.div>
       </div>
     );
   }
 
-  /* ─── PHASE: ABANDONED ───────────────────────────────────────────────────── */
-  if (phase === 'abandoned') {
-    const depKmCovered = Math.round(totalDistKm * abandonProgress / 100);
-    const secondsElapsed = duration * 60 - abandonTimeLeft;
-    const minsElapsed = Math.floor(secondsElapsed / 60);
-    const secsElapsed = secondsElapsed % 60;
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  /* PHASE: ABANDONED                                                        */
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  if (phase === 'abandoned' && selectedRoute) {
+    const kmCovered = Math.round(selectedRoute.distance * abandonProgress / 100);
+    const secsElapsed = duration * 60 - abandonTimeLeft;
+    const mElapsed = Math.floor(secsElapsed / 60);
+    const sElapsed = secsElapsed % 60;
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 8000,
-          background: '#0a0005',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 24,
-        }}
-      >
-        <motion.div
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}
-        >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 8000, background: '#0a0005', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} transition={{ delay: 0.1 }}
+          style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: 60, marginBottom: 16 }}>🚧</div>
-          <h2 style={{ fontSize: 28, fontWeight: 900, color: '#ef4444', marginBottom: 8, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>
-            JOURNEY ABANDONED
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, marginBottom: 28 }}>
-            The train returned to the depot.
-          </p>
+          <h2 style={{ fontSize: 28, fontWeight: 900, color: '#ef4444', marginBottom: 8, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>JOURNEY ABANDONED</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, marginBottom: 28 }}>The train returned to the depot.</p>
           <div style={{ ...GLASS, padding: '20px 28px', marginBottom: 24, textAlign: 'left' }}>
             {[
               ['Train', trainNumber],
-              ['Route', `${depStation?.name} → ${arrStation?.name}`],
-              ['Time Elapsed', `${minsElapsed}m ${secsElapsed}s`],
-              ['Distance Covered', `${depKmCovered} km`],
+              ['Route', selectedRoute.name],
+              ['Time Elapsed', `${mElapsed}m ${sElapsed}s`],
+              ['Distance Covered', `${kmCovered} km`],
               ['Completed', `${Math.round(abandonProgress)}%`],
             ].map(([label, val]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 14 }}>
@@ -720,7 +530,7 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={() => setPhase('picker')}
+            <button onClick={() => { setPhase('picker'); setSelectedRoute(null); }}
               style={{ flex: 1, padding: '14px 0', borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
               Try Again
             </button>
@@ -734,10 +544,11 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
     );
   }
 
-  /* ─── PHASES: ACTIVE + ARRIVING ─────────────────────────────────────────── */
-  const distKmLeft = totalDistKm * (1 - progress / 100);
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  /* PHASES: ACTIVE + ARRIVING                                               */
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  const distKmLeft = selectedRoute ? selectedRoute.distance * (1 - progress / 100) : 0;
   const focusScore = Math.max(60, Math.round(100 - (totalPausedMsRef.current / (duration * 60 * 1000)) * 40));
-  const stationsPassed = Math.max(1, Math.round((totalDistKm * (progress / 100)) / 40));
   const isArriving = phase === 'arriving';
 
   return (
@@ -747,45 +558,23 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
 
       {/* Fixed train icon */}
       <motion.div
-        animate={isArriving && arrivalStep === 'decelerating'
-          ? { x: [0, 2, -1, 1, 0], scale: [1, 1, 0.95, 1] }
-          : { x: 0, scale: 1 }}
+        animate={isArriving && arrivalStep === 'decelerating' ? { x: [0, 2, -1, 1, 0], scale: [1, 1, 0.95, 1] } : { x: 0, scale: 1 }}
         transition={{ duration: 3, ease: 'easeOut' }}
-        style={{
-          position: 'fixed', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          fontSize: 44, zIndex: 9050,
-          filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.9))',
-          pointerEvents: 'none', userSelect: 'none', lineHeight: 1,
-        }}
-      >
-        🚂
-      </motion.div>
+        style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 44, zIndex: 9050, filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.9))', pointerEvents: 'none', userSelect: 'none', lineHeight: 1 }}
+      >🚂</motion.div>
 
       {/* ARRIVED banner */}
       <AnimatePresence>
         {isArriving && (arrivalStep === 'banner' || arrivalStep === 'summary') && (
           <motion.div
-            initial={{ y: -100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -100, opacity: 0 }}
+            initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -100, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            style={{
-              position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9300,
-              background: 'linear-gradient(135deg, #052e16 0%, #14532d 100%)',
-              borderBottom: '2px solid #30D158',
-              padding: '18px 24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
-            }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9300, background: 'linear-gradient(135deg, #052e16 0%, #14532d 100%)', borderBottom: '2px solid #30D158', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}
           >
             <span style={{ fontSize: 28 }}>✅</span>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 20, fontWeight: 900, color: '#30D158', fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2 }}>
-                ARRIVED
-              </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-                {arrStation?.name}
-              </div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: GREEN, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2 }}>ARRIVED</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{selectedRoute?.to}</div>
             </div>
           </motion.div>
         )}
@@ -795,42 +584,31 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
       <AnimatePresence>
         {isArriving && arrivalStep === 'summary' && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.92, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 180, damping: 22, delay: 0.1 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 9200,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-              padding: 24, paddingTop: 100,
-            }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 24, paddingTop: 100 }}
           >
             <div style={{ maxWidth: 440, width: '100%' }}>
               <div style={{ ...GLASS, padding: '28px 32px', textAlign: 'center' }}>
                 <div style={{ fontSize: 48, marginBottom: 8 }}>🚂</div>
-                <h2 style={{ fontSize: 24, fontWeight: 900, color: GREEN, marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>
-                  JOURNEY COMPLETE
-                </h2>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 24 }}>
-                  {depStation?.name} → {arrStation?.name}
-                </p>
-
+                <h2 style={{ fontSize: 24, fontWeight: 900, color: GREEN, marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>JOURNEY COMPLETE</h2>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 24 }}>{selectedRoute?.from} → {selectedRoute?.to}</p>
                 <div style={{ textAlign: 'left', marginBottom: 24 }}>
                   {[
-                    ['Journey Time', `${duration}m · ${focusType}`],
-                    ['Distance Covered', `${Math.round(totalDistKm).toLocaleString()} km`],
-                    ['Stations Passed', `~${Math.max(1, Math.round(totalDistKm / 40))} stations`],
+                    ['Route', selectedRoute?.name || ''],
+                    ['Journey Time', `${duration >= 60 ? `${Math.floor(duration/60)}h ${duration%60}m` : `${duration}m`} · ${focusType}`],
+                    ['Distance Covered', `${selectedRoute?.distance.toLocaleString()} km`],
+                    ['Stations Passed', `~${Math.max(1, Math.round((selectedRoute?.distance || 0) / 40))} stations`],
                     ['Focus Score', `${focusScore} / 100`],
                   ].map(([label, val]) => (
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: 14 }}>
                       <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
-                      <span style={{ color: label === 'Focus Score' ? GREEN : 'white', fontWeight: 700 }}>{val}</span>
+                      <span style={{ color: label === 'Focus Score' ? GREEN : 'white', fontWeight: 700, maxWidth: 220, textAlign: 'right' }}>{val}</span>
                     </div>
                   ))}
                 </div>
-
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => setPhase('picker')}
+                  <button onClick={() => { setPhase('picker'); setSelectedRoute(null); }}
                     style={{ flex: 1, padding: '14px 0', borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                     Book Next Journey
                   </button>
@@ -846,7 +624,7 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
       </AnimatePresence>
 
       {/* Top-left HUD */}
-      {!isArriving && (
+      {!isArriving && selectedRoute && (
         <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 9100, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ ...GLASS, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <button onClick={toggle}
@@ -856,7 +634,7 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>{trainNumber}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220, marginTop: 2 }}>
-                {depStation?.name} → {arrStation?.name}
+                {selectedRoute.name}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{focusType}</div>
             </div>
@@ -922,28 +700,5 @@ export function RailFocusView({ onEnd }: RailFocusViewProps) {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-/* ─── Boarding Badge ─────────────────────────────────────────────────────── */
-function BoardingBadge() {
-  const [lit, setLit] = useState(true);
-  useEffect(() => {
-    const iv = setInterval(() => setLit(v => !v), 800);
-    return () => clearInterval(iv);
-  }, []);
-  return (
-    <span style={{
-      fontSize: 11, fontWeight: 900, letterSpacing: 2, fontFamily: "'JetBrains Mono', monospace",
-      color: lit ? '#f59e0b' : 'rgba(245,158,11,0.3)',
-      transition: 'color 0.3s',
-      textTransform: 'uppercase',
-      padding: '4px 10px',
-      borderRadius: 6,
-      background: lit ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.04)',
-      border: `1px solid ${lit ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.1)'}`,
-    }}>
-      ● BOARDING
-    </span>
   );
 }

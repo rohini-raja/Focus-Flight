@@ -1,0 +1,22 @@
+[
+  {"id":1,"name":"🇬🇧 London → Edinburgh","from":"London Kings Cross","to":"Edinburgh Waverley","waypoints":[[51.5322,-0.1235],[52.9548,-1.1581],[53.4808,-2.2426],[54.9783,-1.6178],[55.9521,-3.1895]],"distance":633,"duration":270},
+  {"id":2,"name":"🇫🇷 Paris → Marseille","from":"Paris Gare de Lyon","to":"Marseille Saint-Charles","waypoints":[[48.8448,2.3735],[46.1512,4.7966],[45.7640,4.8357],[43.2965,5.3813]],"distance":775,"duration":195},
+  {"id":3,"name":"🇯🇵 Tokyo → Osaka","from":"Tokyo Station","to":"Osaka Station","waypoints":[[35.6812,139.7671],[35.1815,136.9066],[34.7024,135.4959]],"distance":513,"duration":145},
+  {"id":4,"name":"🇮🇳 Mumbai → Delhi","from":"Mumbai CST","to":"New Delhi Station","waypoints":[[18.9398,72.8355],[21.1458,79.0882],[23.1765,79.9462],[26.4499,80.3319],[28.6419,77.2194]],"distance":1384,"duration":960},
+  {"id":5,"name":"🇺🇸 New York → Washington DC","from":"Penn Station NY","to":"Union Station DC","waypoints":[[40.7506,-74.0023],[39.9526,-75.1652],[39.3498,-76.6413],[38.8977,-77.0063]],"distance":362,"duration":165},
+  {"id":6,"name":"🇩🇪 Berlin → Munich","from":"Berlin Hauptbahnhof","to":"Munich Hauptbahnhof","waypoints":[[52.5251,13.3694],[51.3397,12.3731],[48.9957,12.1151],[48.1402,11.5580]],"distance":585,"duration":240},
+  {"id":7,"name":"🇨🇳 Beijing → Shanghai","from":"Beijing South","to":"Shanghai Hongqiao","waypoints":[[39.8654,116.3783],[36.6512,117.1201],[34.2674,117.1950],[31.1934,121.3237]],"distance":1318,"duration":270},
+  {"id":8,"name":"🇪🇸 Madrid → Barcelona","from":"Madrid Atocha","to":"Barcelona Sants","waypoints":[[40.4065,-3.6914],[41.3851,2.1734]],"distance":621,"duration":165},
+  {"id":9,"name":"🇮🇹 Rome → Milan","from":"Roma Termini","to":"Milano Centrale","waypoints":[[41.9009,12.5011],[43.7696,11.2558],[44.4056,8.9463],[45.4862,9.2045]],"distance":575,"duration":175},
+  {"id":10,"name":"🇷🇺 Moscow → St Petersburg","from":"Moscow Leningradsky","to":"St Petersburg Moskovsky","waypoints":[[55.7765,37.6554],[57.9661,32.9598],[59.9311,30.3609]],"distance":650,"duration":240},
+  {"id":11,"name":"🇦🇺 Sydney → Melbourne","from":"Sydney Central","to":"Melbourne Southern Cross","waypoints":[[-33.8833,151.2056],[-34.9285,138.6007],[-37.8183,144.9671]],"distance":878,"duration":660},
+  {"id":12,"name":"🇨🇦 Toronto → Montreal","from":"Toronto Union","to":"Montreal Central","waypoints":[[43.6453,-79.3806],[44.2334,-76.4819],[45.5017,-73.5673]],"distance":541,"duration":300},
+  {"id":13,"name":"🇧🇷 São Paulo → Rio","from":"São Paulo Luz","to":"Rio Central","waypoints":[[-23.5329,-46.6395],[-22.9068,-43.1729]],"distance":429,"duration":360},
+  {"id":14,"name":"🇳🇱 Amsterdam → Paris","from":"Amsterdam Centraal","to":"Paris Nord","waypoints":[[52.3791,4.9003],[51.2194,4.4025],[50.6292,3.0573],[48.8809,2.3553]],"distance":514,"duration":195},
+  {"id":15,"name":"🇨🇭 Zurich → Geneva","from":"Zurich HB","to":"Geneva Cornavin","waypoints":[[47.3783,8.5403],[46.9480,7.4474],[46.2044,6.1432]],"distance":288,"duration":170},
+  {"id":16,"name":"🇯🇵 Tokyo → Sapporo","from":"Tokyo Station","to":"Sapporo Station","waypoints":[[35.6812,139.7671],[37.9026,140.8765],[41.7688,140.7288],[43.0618,141.3545]],"distance":1035,"duration":480},
+  {"id":17,"name":"🇰🇷 Seoul → Busan","from":"Seoul Station","to":"Busan Station","waypoints":[[37.5547,126.9707],[36.3504,127.3845],[35.1796,129.0756]],"distance":325,"duration":150},
+  {"id":18,"name":"🇿🇦 Johannesburg → Cape Town","from":"Park Station JHB","to":"Cape Town Station","waypoints":[[-26.2041,28.0473],[-29.1210,26.2140],[-33.9249,18.4241]],"distance":1547,"duration":1680},
+  {"id":19,"name":"🇲🇽 Mexico City → Guadalajara","from":"Buenavista CDMX","to":"Guadalajara Station","waypoints":[[19.4517,-99.1453],[20.5888,-100.3899],[20.6597,-103.3496]],"distance":539,"duration":360},
+  {"id":20,"name":"🇸🇪 Stockholm → Oslo","from":"Stockholm Central","to":"Oslo Central","waypoints":[[59.3304,18.0582],[59.6099,16.5448],[59.9139,10.7522]],"distance":521,"duration":360}
+]
