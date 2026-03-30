@@ -92,6 +92,25 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `artifacts/focusflight` (`@workspace/focusflight`)
+
+FocusFlight — productivity app turning focus sessions into immersive virtual flights. React+Vite, 100% client-side (localStorage), previewPath `/`.
+
+**Key features:**
+- 20 major airports; GPS origin detection; destination chosen by session duration; great-circle route countdown
+- Leaflet map: ESRI satellite (day) + CartoDB Dark Matter (night); altitude zoom simulation (RUNWAY→CRUISE→LANDING)
+- All React UI uses `position: fixed` + z-index 8000+ to stay above Leaflet tiles; plane icon at z:9050 (above preflight overlay at z:9000)
+- **Flight icons**: 12 creative options (✈️🛩️🚀🛸🚁🦅☄️🛰️🐉🎈🦋🌟); picker in Settings; stored in `planeIcon` setting
+- **Day/Night map**: ☀️/🌙 toggle in flight HUD and Settings page; stored in `mapTheme` setting
+- **Ambient sounds**: 8 synthesized types via Web Audio API; sound picker panel in flight HUD (🔇 button, top-right)
+- Preflight overlay → "Start Flight" → launch zoom → timer; "Land Now" emergency button with confirmation modal
+
+**Storage keys:** `focusflight_settings`, `focusflight_logbook`, `focusflight_active_session`
+
+**Key files:** `MapFlightView.tsx` (map + HUD), `ActiveFlight.tsx` (timer/session), `use-ambient-sound.ts`, `use-storage.ts`, `flight-utils.ts` (PLANE_ICONS)
+
+---
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

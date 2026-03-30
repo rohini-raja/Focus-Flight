@@ -34,6 +34,7 @@ type Airport = typeof AIRPORTS[number];
 const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const HYBRID_TILES    = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 const STREET_TILES    = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const NIGHT_TILES     = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
 // ─── Zoom levels ──────────────────────────────────────────────────────────────
 const ZOOM_PREFLIGHT = 11;
@@ -116,22 +117,28 @@ interface MapFlightViewProps {
   isActive: boolean;
   flightStarted: boolean;
   currentSound: SoundType;
+  planeIcon: string;
+  mapTheme: 'day' | 'night';
   onToggle: () => void;
   onStartFlight: () => void;
   onEarlyLanding: () => void;
   onSoundChange: (s: SoundType) => void;
+  onMapThemeToggle: () => void;
 }
 
 export function MapFlightView({
   session, timeLeft, progress, totalSeconds,
-  isActive, flightStarted, currentSound,
-  onToggle, onStartFlight, onEarlyLanding, onSoundChange,
+  isActive, flightStarted, currentSound, planeIcon, mapTheme,
+  onToggle, onStartFlight, onEarlyLanding, onSoundChange, onMapThemeToggle,
 }: MapFlightViewProps) {
   const mapRef         = useRef<L.Map|null>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
   const satRef         = useRef<L.TileLayer|null>(null);
   const hybridRef      = useRef<L.TileLayer|null>(null);
   const streetRef      = useRef<L.TileLayer|null>(null);
+  const nightRef       = useRef<L.TileLayer|null>(null);
+  const mapThemeRef    = useRef(mapTheme);
+  mapThemeRef.current  = mapTheme;
   const startRef       = useRef<[number,number]|null>(null);
   const endRef         = useRef<[number,number]|null>(null);
   const totalKmRef     = useRef<number|null>(null);
@@ -158,9 +165,18 @@ export function MapFlightView({
       dragging:false, doubleClickZoom:false, boxZoom:false,
       zoomAnimation:true, fadeAnimation:true,
     });
-    satRef.current    = L.tileLayer(SATELLITE_TILES,{maxZoom:18}).addTo(map);
-    hybridRef.current = L.tileLayer(HYBRID_TILES,{maxZoom:18,opacity:0.8}).addTo(map);
+    satRef.current    = L.tileLayer(SATELLITE_TILES,{maxZoom:18});
+    hybridRef.current = L.tileLayer(HYBRID_TILES,{maxZoom:18,opacity:0.8});
     streetRef.current = L.tileLayer(STREET_TILES,{maxZoom:18});
+    nightRef.current  = L.tileLayer(NIGHT_TILES,{maxZoom:18,subdomains:'abcd'});
+
+    // Apply the correct tile layers based on the current theme preference
+    if (mapThemeRef.current === 'night') {
+      nightRef.current.addTo(map);
+    } else {
+      satRef.current.addTo(map);
+      hybridRef.current.addTo(map);
+    }
     mapRef.current = map;
 
     const init = async () => {
@@ -201,6 +217,26 @@ export function MapFlightView({
     init();
     return () => { map.remove(); mapRef.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── React to mapTheme prop changes ──────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !satRef.current || !nightRef.current) return;
+    if (mapTheme === 'night') {
+      if (satRef.current   && map.hasLayer(satRef.current))    map.removeLayer(satRef.current);
+      if (hybridRef.current && map.hasLayer(hybridRef.current)) map.removeLayer(hybridRef.current);
+      if (streetRef.current && map.hasLayer(streetRef.current)) map.removeLayer(streetRef.current);
+      if (!map.hasLayer(nightRef.current)) nightRef.current.addTo(map);
+    } else {
+      if (nightRef.current && map.hasLayer(nightRef.current)) map.removeLayer(nightRef.current);
+      if (isSat) {
+        if (satRef.current && !map.hasLayer(satRef.current)) satRef.current.addTo(map);
+        if (showLabels && hybridRef.current && !map.hasLayer(hybridRef.current)) hybridRef.current.addTo(map);
+      } else {
+        if (streetRef.current && !map.hasLayer(streetRef.current)) streetRef.current.addTo(map);
+      }
+    }
+  }, [mapTheme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Tick: pan + zoom + distance countdown ───────────────────────────────────
   useEffect(() => {
@@ -278,7 +314,7 @@ export function MapFlightView({
           <span style={{ position:'relative', zIndex:1, fontSize:36, lineHeight:1,
             transform:`rotate(-${bearing}deg)`,
             filter:'drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 2px 14px rgba(0,0,0,0.7))' }}>
-            ✈️
+            {planeIcon}
           </span>
         </div>
       </div>
@@ -426,22 +462,42 @@ export function MapFlightView({
             </div>
           </div>
 
-          {/* TOP-RIGHT: Map controls + Sound */}
+          {/* TOP-RIGHT: Map controls + Night + Sound */}
           <div style={{ position:'fixed', top:20, right:20, zIndex:8100, display:'flex', flexDirection:'column', gap:10, alignItems:'flex-end' }}>
-            <button onClick={toggleLayer} style={{ ...BTN, background: isSat ? 'rgba(255,255,255,0.22)' : BTN.background }}
-              title={isSat?'Street':'Satellite'}>
-              {isSat ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
-                </svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <circle cx="12" cy="12" r="9"/>
-                  <path d="M3 12h18M12 3c-3 4-3 14 0 18M12 3c3 4 3 14 0 18"/>
-                </svg>
-              )}
+            {/* Day/Night toggle — always visible */}
+            <button
+              onClick={onMapThemeToggle}
+              title={mapTheme === 'night' ? 'Switch to Day' : 'Switch to Night'}
+              style={{
+                ...BTN,
+                background: mapTheme === 'night'
+                  ? 'rgba(90,40,160,0.7)'
+                  : 'rgba(255,215,0,0.18)',
+                border: mapTheme === 'night'
+                  ? '1px solid rgba(167,139,250,0.5)'
+                  : '1px solid rgba(255,215,0,0.35)',
+              }}
+            >
+              <span style={{ fontSize: 18 }}>{mapTheme === 'night' ? '🌙' : '☀️'}</span>
             </button>
+
+            {/* Sat/Street — hidden in night mode */}
+            {mapTheme !== 'night' && (
+              <button onClick={toggleLayer} style={{ ...BTN, background: isSat ? 'rgba(255,255,255,0.22)' : BTN.background }}
+                title={isSat?'Street':'Satellite'}>
+                {isSat ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M3 12h18M12 3c-3 4-3 14 0 18M12 3c3 4 3 14 0 18"/>
+                  </svg>
+                )}
+              </button>
+            )}
             <button onClick={reCenter} style={BTN} title="Re-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                 <circle cx="12" cy="12" r="8"/>
@@ -449,13 +505,15 @@ export function MapFlightView({
                 <circle cx="12" cy="12" r="2.5" fill="white" stroke="none"/>
               </svg>
             </button>
-            <button onClick={toggleLabels}
-              style={{ ...BTN, background: showLabels ? 'rgba(255,255,255,0.22)' : BTN.background }}
-              title="Labels">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <path d="M4 6h16M4 12h10M4 18h12"/>
-              </svg>
-            </button>
+            {mapTheme !== 'night' && (
+              <button onClick={toggleLabels}
+                style={{ ...BTN, background: showLabels ? 'rgba(255,255,255,0.22)' : BTN.background }}
+                title="Labels">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M4 6h16M4 12h10M4 18h12"/>
+                </svg>
+              </button>
+            )}
 
             {/* Sound button */}
             <button

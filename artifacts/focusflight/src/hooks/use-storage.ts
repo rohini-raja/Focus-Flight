@@ -37,13 +37,17 @@ export interface Settings {
   defaultFocusType: string;
   preferredMode: 'flight' | 'train' | 'bus';
   defaultSound: string;
+  planeIcon: string;
+  mapTheme: 'day' | 'night';
 }
 
 const DEFAULT_SETTINGS: Settings = {
   defaultDuration: 60,
   defaultFocusType: 'Deep Work',
   preferredMode: 'flight',
-  defaultSound: 'silence'
+  defaultSound: 'silence',
+  planeIcon: '✈️',
+  mapTheme: 'day',
 };
 
 export function useSettings() {

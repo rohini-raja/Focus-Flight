@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 import { useSession } from '@/context/SessionContext';
 import { useTimer } from '@/hooks/use-timer';
 import { useAmbientSound } from '@/hooks/use-ambient-sound';
-import { useLogbook } from '@/hooks/use-storage';
+import { useLogbook, useSettings } from '@/hooks/use-storage';
 
 import { MapFlightView } from '@/components/MapFlightView';
 import { ArrivalBoard } from '@/components/ArrivalBoard';
@@ -15,6 +15,7 @@ export default function ActiveFlight() {
   const [, setLocation] = useLocation();
   const { activeSession, clearSession } = useSession();
   const { addLog } = useLogbook();
+  const { settings, updateSettings } = useSettings();
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasLanded, setHasLanded] = useState(false);
@@ -129,10 +130,13 @@ export default function ActiveFlight() {
         isActive={isActive}
         flightStarted={flightStarted}
         currentSound={currentSound}
+        planeIcon={settings.planeIcon}
+        mapTheme={settings.mapTheme}
         onToggle={toggleTimer}
         onStartFlight={handleStartFlight}
         onEarlyLanding={() => setShowExitConfirm(true)}
         onSoundChange={playSound}
+        onMapThemeToggle={() => updateSettings({ mapTheme: settings.mapTheme === 'night' ? 'day' : 'night' })}
       />
 
       {/* DESCENT ANNOUNCEMENTS */}

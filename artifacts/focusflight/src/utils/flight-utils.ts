@@ -3,6 +3,23 @@
 export type TransportMode = 'flight' | 'train' | 'bus';
 export type FocusType = 'Deep Work' | 'Study' | 'Creative' | 'Meeting' | 'Reading';
 
+export const PLANE_ICONS = [
+  { id: '✈️',  label: 'Airliner',   desc: 'Classic jet' },
+  { id: '🛩️',  label: 'Propeller',  desc: 'Light aircraft' },
+  { id: '🚀',  label: 'Rocket',     desc: 'To the moon' },
+  { id: '🛸',  label: 'UFO',        desc: 'Unidentified' },
+  { id: '🚁',  label: 'Chopper',    desc: 'Helicopter' },
+  { id: '🦅',  label: 'Eagle',      desc: 'Soaring free' },
+  { id: '☄️',  label: 'Comet',      desc: 'Blazing trail' },
+  { id: '🛰️',  label: 'Satellite',  desc: 'Orbital view' },
+  { id: '🐉',  label: 'Dragon',     desc: 'Mythic flight' },
+  { id: '🎈',  label: 'Balloon',    desc: 'Gentle drift' },
+  { id: '🦋',  label: 'Butterfly',  desc: 'Flutter by' },
+  { id: '🌟',  label: 'Star',       desc: 'Shooting star' },
+] as const;
+
+export type PlaneIconId = typeof PLANE_ICONS[number]['id'];
+
 export interface SessionConfig {
   id: string;
   mode: TransportMode;
