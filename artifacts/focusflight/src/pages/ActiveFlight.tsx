@@ -18,6 +18,7 @@ export default function ActiveFlight() {
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasLanded, setHasLanded] = useState(false);
+  const [flightStarted, setFlightStarted] = useState(false);
 
   const announced85 = useRef(false);
   const announced90 = useRef(false);
@@ -44,13 +45,12 @@ export default function ActiveFlight() {
   const { isPlaying, playSound } = useAmbientSound('engine-hum');
   const pauseSound = () => playSound('silence');
 
-  useEffect(() => {
-    if (activeSession && !hasLanded) {
-      if (!isActive) toggleTimer();
-      if (!isPlaying) playSound('engine-hum');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);  // run once on mount
+  // Called by MapFlightView after the launch zoom-in animation completes
+  const handleStartFlight = () => {
+    setFlightStarted(true);
+    if (!isActive) toggleTimer();
+    if (!isPlaying) playSound('engine-hum');
+  };
 
   useEffect(() => {
     if (!activeSession) return;
@@ -126,7 +126,9 @@ export default function ActiveFlight() {
         progress={progress}
         totalSeconds={totalSeconds}
         isActive={isActive}
+        flightStarted={flightStarted}
         onToggle={toggleTimer}
+        onStartFlight={handleStartFlight}
         onEarlyLanding={() => setShowExitConfirm(true)}
       />
 
