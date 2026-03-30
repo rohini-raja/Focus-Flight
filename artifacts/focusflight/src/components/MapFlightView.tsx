@@ -568,7 +568,7 @@ export function MapFlightView({
                         >
                           <span style={{ fontSize:22, lineHeight:1 }}>{opt.id}</span>
                           <span style={{ fontSize:9, fontWeight:700, letterSpacing:0.3,
-                            color: active ? '#4fc3f7' : 'rgba(255,255,255,0.5)',
+                            color: active ? '#30D158' : 'rgba(255,255,255,0.5)',
                             textAlign:'center', lineHeight:1.2 }}>
                             {opt.label}
                           </span>

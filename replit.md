@@ -94,20 +94,20 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 
 ### `artifacts/focusflight` (`@workspace/focusflight`)
 
-FocusFlight — productivity app turning focus sessions into immersive virtual flights. React+Vite, 100% client-side (localStorage), previewPath `/`.
+**Rohini's Focus Assistant** — productivity app turning focus sessions into immersive virtual journeys. React+Vite, 100% client-side (localStorage), previewPath `/`. Accent color: iPhone green `#30D158` (`--primary: 142 71% 45%`).
 
 **Key features:**
-- 20 major airports; GPS origin detection; destination chosen by session duration; great-circle route countdown
-- Leaflet map: ESRI satellite (day) + CartoDB Dark Matter (night); altitude zoom simulation (RUNWAY→CRUISE→LANDING)
-- All React UI uses `position: fixed` + z-index 8000+ to stay above Leaflet tiles; plane icon at z:9050 (above preflight overlay at z:9000)
-- **Flight icons**: 12 creative options (✈️🛩️🚀🛸🚁🦅☄️🛰️🐉🎈🦋🌟); picker in Settings; stored in `planeIcon` setting
-- **Day/Night map**: ☀️/🌙 toggle in flight HUD and Settings page; stored in `mapTheme` setting
-- **Ambient sounds**: 8 synthesized types via Web Audio API; sound picker panel in flight HUD (🔇 button, top-right)
-- Preflight overlay → "Start Flight" → launch zoom → timer; "Land Now" emergency button with confirmation modal
+- **Flight mode**: 20 major airports; GPS origin detection; great-circle route countdown; Leaflet ESRI satellite (day) + CartoDB Dark Matter (night); altitude zoom simulation (RUNWAY→CRUISE→LANDING)
+- **Flight icons**: 12 creative options (✈️🛩️🚀🛸🚁🦅☄️🛰️🐉🎈🦋🌟); picker in Settings + in-HUD (top-right column); `planeIcon` in settings
+- **Day/Night map**: ☀️/🌙 toggle in flight HUD and Settings; `mapTheme` in settings
+- **Ambient sounds**: 8 synthesized types via Web Audio API; sound picker in flight HUD (🔇 button)
+- **Ground Transit (Train/Bus)**: animated window views, route progress bar, logbook integration
+- **RailFocus mode**: Leaflet + OpenStreetMap base + OpenRailwayMap overlay tiles; Overpass API station search + 30-station fallback; 🚂 fixed center; map pans from departure to arrival as session progresses; zoom z14 (ground level); Time Remaining + Distance Remaining HUD
+- All React HUD UI uses `position: fixed` + z-index 8000-9200 to stay above Leaflet tiles
 
 **Storage keys:** `focusflight_settings`, `focusflight_logbook`, `focusflight_active_session`
 
-**Key files:** `MapFlightView.tsx` (map + HUD), `ActiveFlight.tsx` (timer/session), `use-ambient-sound.ts`, `use-storage.ts`, `flight-utils.ts` (PLANE_ICONS)
+**Key files:** `MapFlightView.tsx` (flight HUD), `ActiveFlight.tsx` (flight session), `RailFocusView.tsx` (new: RailFocus map), `TransitMode.tsx` (transit + railfocus), `use-ambient-sound.ts`, `use-storage.ts`, `flight-utils.ts` (PLANE_ICONS)
 
 ---
 

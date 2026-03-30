@@ -42,7 +42,7 @@
   --popover: 220 28% 12%;
   --popover-foreground: 220 100% 95%;
   
-  --primary: 199 91% 64%; /* #4fc3f7 Sky Blue */
+  --primary: 142 71% 45%; /* #30D158 iPhone Green */
   --primary-foreground: 222 47% 7%;
   
   --secondary: 43 100% 65%; /* #ffd54f Golden Yellow */
@@ -51,7 +51,7 @@
   --muted: 220 20% 16%;
   --muted-foreground: 214 22% 55%; /* #8899aa */
   
-  --accent: 199 91% 64%;
+  --accent: 142 71% 45%;
   --accent-foreground: 222 47% 7%;
   
   --destructive: 0 62% 50%;

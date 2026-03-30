@@ -9,10 +9,11 @@ import { useLogbook } from '@/hooks/use-storage';
 import { useAmbientSound } from '@/hooks/use-ambient-sound';
 import { TrainWindowView } from '@/components/TrainWindowView';
 import { BusWindowView } from '@/components/BusWindowView';
+import { RailFocusView } from '@/components/RailFocusView';
 import { formatTime, generateIata, FocusType, SessionConfig } from '@/utils/flight-utils';
 import confetti from 'canvas-confetti';
 
-type TransitVehicle = 'train' | 'bus';
+type TransitVehicle = 'train' | 'bus' | 'railfocus';
 
 const TRAIN_ROUTES = [
   { from: 'Chennai Central', to: 'Bangalore City' },
@@ -115,7 +116,7 @@ function ActiveTransitSession({
 
   const handleComplete = () => {
     setHasArrived(true);
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#4fc3f7', '#ffd54f', '#ffffff'] });
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#30D158', '#ffd54f', '#ffffff'] });
     const completedSession = { ...session, completed: true };
     addLog(completedSession);
     onComplete(completedSession);
@@ -354,6 +355,41 @@ export default function TransitMode() {
     );
   }
 
+  if (vehicle === 'railfocus') {
+    return (
+      <div className="relative min-h-[calc(100vh-4rem)]" style={{ backgroundColor: '#0a0e1a' }}>
+        <StarField />
+        {/* Mode switcher bar */}
+        <div className="relative z-10 pt-20 px-4">
+          <div className="max-w-2xl mx-auto mb-6">
+            <div className="bg-card/50 border border-white/10 rounded-2xl p-2 flex gap-2">
+              <button
+                onClick={() => setVehicle('train')}
+                className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-all text-muted-foreground hover:text-white"
+              >
+                <Train className="w-5 h-5" /> 🚆 Train
+              </button>
+              <button
+                onClick={() => setVehicle('bus')}
+                className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-all text-muted-foreground hover:text-white"
+              >
+                <Bus className="w-5 h-5" /> 🚌 Bus
+              </button>
+              <button
+                className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-all bg-primary text-background"
+              >
+                🚂 RailFocus
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="relative z-10 -mt-6">
+          <RailFocusView onEnd={() => setVehicle('train')} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-[calc(100vh-4rem)] pt-20 pb-24 px-4">
       <StarField />
@@ -387,6 +423,12 @@ export default function TransitMode() {
           >
             <Bus className="w-5 h-5" />
             🚌 Bus
+          </button>
+          <button
+            onClick={() => setVehicle('railfocus')}
+            className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-all text-muted-foreground hover:text-white"
+          >
+            🚂 RailFocus
           </button>
         </div>
 

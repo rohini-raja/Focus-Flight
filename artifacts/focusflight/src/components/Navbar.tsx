@@ -28,7 +28,7 @@ export function Navbar() {
               <Plane className="w-5 h-5 text-primary transform -rotate-45" />
             </div>
             <span className="font-display font-bold text-lg tracking-tight text-white">
-              FocusFlight
+              Rohini's Focus
             </span>
           </Link>
 

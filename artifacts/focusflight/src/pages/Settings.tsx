@@ -117,14 +117,14 @@ export default function Settings() {
                       <span style={{
                         position: 'absolute', top: 6, right: 8,
                         width: 8, height: 8, borderRadius: '50%',
-                        background: '#4fc3f7',
-                        boxShadow: '0 0 6px #4fc3f7',
+                        background: '#30D158',
+                        boxShadow: '0 0 6px #30D158',
                       }} />
                     )}
                     <span style={{ fontSize: 26 }}>{icon.id}</span>
                     <span style={{
                       fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-                      color: active ? '#4fc3f7' : 'rgba(255,255,255,0.45)',
+                      color: active ? '#30D158' : 'rgba(255,255,255,0.45)',
                       textAlign: 'center',
                     }}>
                       {icon.label}
@@ -158,9 +158,9 @@ export default function Settings() {
                       gap: 10,
                       padding: '14px 20px',
                       borderRadius: 14,
-                      border: active ? '1.5px solid rgba(79,195,247,0.6)' : '1.5px solid rgba(255,255,255,0.08)',
+                      border: active ? '1.5px solid rgba(48,209,88,0.6)' : '1.5px solid rgba(255,255,255,0.08)',
                       background: active
-                        ? (theme === 'night' ? 'rgba(30,10,60,0.7)' : 'rgba(79,195,247,0.1)')
+                        ? (theme === 'night' ? 'rgba(30,10,60,0.7)' : 'rgba(48,209,88,0.1)')
                         : 'rgba(255,255,255,0.04)',
                       cursor: 'pointer',
                       transition: 'all 0.18s',
@@ -169,7 +169,7 @@ export default function Settings() {
                     <span style={{ fontSize: 22 }}>{theme === 'day' ? '☀️' : '🌙'}</span>
                     <span style={{
                       fontSize: 14, fontWeight: 700,
-                      color: active ? (theme === 'night' ? '#a78bfa' : '#4fc3f7') : 'rgba(255,255,255,0.5)',
+                      color: active ? (theme === 'night' ? '#a78bfa' : '#30D158') : 'rgba(255,255,255,0.5)',
                     }}>
                       {theme === 'day' ? 'Day Mode' : 'Night Mode'}
                     </span>
@@ -227,7 +227,7 @@ export default function Settings() {
 
         <div className="text-center pb-8">
           <p className="text-muted-foreground text-sm flex items-center justify-center gap-2">
-            <Plane className="w-4 h-4" /> FocusFlight v1.0.0
+            <Plane className="w-4 h-4" /> Rohini's Focus Assistant v2.0
           </p>
           <p className="text-muted-foreground/50 text-xs mt-1">All data is stored locally on your device.</p>
         </div>

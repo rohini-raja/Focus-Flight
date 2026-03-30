@@ -77,8 +77,8 @@ export default function ActiveFlight() {
   const triggerConfetti = () => {
     const end = Date.now() + 3000;
     const frame = () => {
-      confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#4fc3f7', '#ffd54f', '#ffffff'] });
-      confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#4fc3f7', '#ffd54f', '#ffffff'] });
+      confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#30D158', '#ffd54f', '#ffffff'] });
+      confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#30D158', '#ffd54f', '#ffffff'] });
       if (Date.now() < end) requestAnimationFrame(frame);
     };
     frame();
