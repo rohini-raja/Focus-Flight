@@ -102,12 +102,18 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 - **Day/Night map**: ☀️/🌙 toggle in flight HUD and Settings; `mapTheme` in settings
 - **Ambient sounds**: 8 synthesized types via Web Audio API; sound picker in flight HUD (🔇 button)
 - **Ground Transit (Train/Bus)**: animated window views, route progress bar, logbook integration
-- **RailFocus mode**: Leaflet + OpenStreetMap base + OpenRailwayMap overlay tiles; Overpass API station search + 30-station fallback; 🚂 fixed center; map pans from departure to arrival as session progresses; zoom z14 (ground level); Time Remaining + Distance Remaining HUD
+- **RailFocus mode**: Leaflet + OpenStreetMap base + OpenRailwayMap overlay tiles; Overpass API station search + 30-station fallback; 🚂 fixed center; map pans departure→arrival as session progresses; zoom z14 (ground level); Time Remaining + Distance Remaining HUD
+- **Platform Screen** (`'platform'` phase): full-screen Solari flip-flap departure board with CRT scanlines; `FlipChar` + `FlipText` components cycle random chars before settling; `BoardRow` grid (Train#, From, To, Journey, Dist, Status); blinking amber "BOARDING" badge; "BOARD TRAIN" button fades in after animations
+- **Arrival Sequence** (`'arriving'` phase): 4s deceleration pan to arrival station with train icon stop animation; "ARRIVED ✅" banner slides from top; session summary card with journey time, distance, stations passed (~dist÷40km), focus score
+- **Abandoned screen** (`'abandoned'` phase): captures progress/timeLeft snapshot; shows elapsed time, distance covered, completion %
+- **Home mode switcher**: segmented `FocusFlight ✈️ | RailFocus 🚂` control at top of home page; switches hero copy, marquee, CTA button; RailFocus button sets `sessionStorage('rf_direct')` then navigates to `/transit`
+- **Shared stats & streaks**: `computeStats(logs)` in flight-utils returns streak, flightCount, railCount, transitCount, totalDistKm, totalHours (flight distances converted miles→km)
+- **Achievements** (`ACHIEVEMENTS` array in flight-utils): 9 badges — 5 flight (First Flight, Globe Trotter, On Fire, Deep Dive, Centurion) + 4 rail (🚂 First Departure, 🛤️ On Track, 🌍 Trans-Siberian, 🚄 Bullet Train); rendered in Settings.tsx with earned/locked states
 - All React HUD UI uses `position: fixed` + z-index 8000-9200 to stay above Leaflet tiles
 
-**Storage keys:** `focusflight_settings`, `focusflight_logbook`, `focusflight_active_session`
+**Storage keys:** `focusflight_settings`, `focusflight_logbook`, `focusflight_active_session`, `sessionStorage('rf_direct')` (ephemeral home→transit nav)
 
-**Key files:** `MapFlightView.tsx` (flight HUD), `ActiveFlight.tsx` (flight session), `RailFocusView.tsx` (new: RailFocus map), `TransitMode.tsx` (transit + railfocus), `use-ambient-sound.ts`, `use-storage.ts`, `flight-utils.ts` (PLANE_ICONS)
+**Key files:** `MapFlightView.tsx` (flight HUD), `ActiveFlight.tsx` (flight session), `RailFocusView.tsx` (RailFocus with platform/arriving/abandoned phases), `TransitMode.tsx` (transit + railfocus), `Settings.tsx` (stats + achievements), `flight-utils.ts` (PLANE_ICONS, ACHIEVEMENTS, computeStats, computeStreak)
 
 ---
 

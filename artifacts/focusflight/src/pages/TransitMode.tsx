@@ -300,6 +300,14 @@ export default function TransitMode() {
   const [activeSession, setActiveSession] = useState<SessionConfig | null>(null);
   const [completedSession, setCompletedSession] = useState<SessionConfig | null>(null);
 
+  // Auto-select RailFocus if navigated from the home mode switcher
+  useEffect(() => {
+    if (sessionStorage.getItem('rf_direct') === '1') {
+      sessionStorage.removeItem('rf_direct');
+      setVehicle('railfocus');
+    }
+  }, []);
+
   const routes = vehicle === 'train' ? TRAIN_ROUTES : BUS_ROUTES;
 
   const handleQuickRoute = (route: { from: string; to: string }) => {
