@@ -42,13 +42,14 @@ export default function ActiveFlight() {
   const { timeLeft, isActive, toggle: toggleTimer, progress, totalSeconds } =
     useTimer(activeSession?.durationMinutes || 0, handleTimerComplete);
 
-  const { isPlaying, playSound } = useAmbientSound('engine-hum');
+  const { currentSound, isPlaying, playSound } = useAmbientSound('silence');
   const pauseSound = () => playSound('silence');
 
   // Called by MapFlightView after the launch zoom-in animation completes
   const handleStartFlight = () => {
     setFlightStarted(true);
     if (!isActive) toggleTimer();
+    // Start engine hum only if user hasn't chosen a sound yet
     if (!isPlaying) playSound('engine-hum');
   };
 
@@ -127,9 +128,11 @@ export default function ActiveFlight() {
         totalSeconds={totalSeconds}
         isActive={isActive}
         flightStarted={flightStarted}
+        currentSound={currentSound}
         onToggle={toggleTimer}
         onStartFlight={handleStartFlight}
         onEarlyLanding={() => setShowExitConfirm(true)}
+        onSoundChange={playSound}
       />
 
       {/* DESCENT ANNOUNCEMENTS */}

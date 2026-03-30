@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SessionConfig, formatTime } from '@/utils/flight-utils';
+import { SoundType, SOUND_OPTIONS } from '@/hooks/use-ambient-sound';
 
 // ─── 20 major world airports ──────────────────────────────────────────────────
 const AIRPORTS = [
@@ -114,14 +115,17 @@ interface MapFlightViewProps {
   totalSeconds: number;
   isActive: boolean;
   flightStarted: boolean;
+  currentSound: SoundType;
   onToggle: () => void;
   onStartFlight: () => void;
   onEarlyLanding: () => void;
+  onSoundChange: (s: SoundType) => void;
 }
 
 export function MapFlightView({
   session, timeLeft, progress, totalSeconds,
-  isActive, flightStarted, onToggle, onStartFlight, onEarlyLanding,
+  isActive, flightStarted, currentSound,
+  onToggle, onStartFlight, onEarlyLanding, onSoundChange,
 }: MapFlightViewProps) {
   const mapRef         = useRef<L.Map|null>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
@@ -134,15 +138,16 @@ export function MapFlightView({
   const progressRef    = useRef(progress);
   progressRef.current  = progress;
 
-  const [isSat,        setIsSat]      = useState(true);
-  const [showLabels,   setShowLabels] = useState(true);
-  const [distKm,       setDistKm]     = useState<number|null>(null);
-  const [bearing,      setBearing]    = useState(45);
-  const [launching,    setLaunching]  = useState(false);
-  const [routeReady,   setRouteReady] = useState(false);
-  const [originCode,   setOriginCode] = useState('');
-  const [destCode,     setDestCode]   = useState('');
-  const [destCity,     setDestCity]   = useState('');
+  const [isSat,          setIsSat]          = useState(true);
+  const [showLabels,     setShowLabels]     = useState(true);
+  const [distKm,         setDistKm]         = useState<number|null>(null);
+  const [bearing,        setBearing]        = useState(45);
+  const [launching,      setLaunching]      = useState(false);
+  const [routeReady,     setRouteReady]     = useState(false);
+  const [showSoundPicker,setShowSoundPicker]= useState(false);
+  const [originCode,     setOriginCode]     = useState('');
+  const [destCode,       setDestCode]       = useState('');
+  const [destCity,       setDestCity]       = useState('');
 
   // ── Map init ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -251,31 +256,32 @@ export function MapFlightView({
 
   return (
     <>
-      {/* ── Full-screen map container ─────────────────────────────────── */}
+      {/* ── Full-screen map canvas ────────────────────────────────────── */}
       <div style={{ position:'fixed', inset:0, zIndex:0 }}>
         <div ref={containerRef} style={{ position:'absolute', inset:0 }} />
-
-        {/* Plane icon — absolute within map viewport, below UI layers */}
-        <div style={{ position:'absolute', inset:0, display:'flex',
-          alignItems:'center', justifyContent:'center', pointerEvents:'none', zIndex:10 }}>
-          <div style={{ transform:`rotate(${bearing}deg)`, position:'relative',
-            display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <div style={{ position:'absolute', width:80, height:80, borderRadius:'50%',
-              background:'rgba(255,255,255,0.07)', animation:'halo 2.4s ease-out infinite' }} />
-            <div style={{ position:'absolute', width:48, height:48, borderRadius:'50%',
-              background:'rgba(255,255,255,0.14)', border:'1px solid rgba(255,255,255,0.2)' }} />
-            <span style={{ position:'relative', zIndex:1, fontSize:36, lineHeight:1,
-              transform:`rotate(-${bearing}deg)`, filter:'drop-shadow(0 2px 12px rgba(255,255,255,0.8))' }}>
-              ✈️
-            </span>
-          </div>
-        </div>
       </div>
 
       <style>{`
         @keyframes halo { 0%{opacity:.7;transform:scale(1)} 100%{opacity:0;transform:scale(2)} }
         @keyframes spin  { to{transform:rotate(360deg)} }
       `}</style>
+
+      {/* ── Plane icon — fixed z:9050 so always visible above everything ── */}
+      <div style={{ position:'fixed', inset:0, display:'flex', alignItems:'center',
+        justifyContent:'center', pointerEvents:'none', zIndex:9050 }}>
+        <div style={{ transform:`rotate(${bearing}deg)`, position:'relative',
+          display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ position:'absolute', width:84, height:84, borderRadius:'50%',
+            background:'rgba(255,255,255,0.07)', animation:'halo 2.4s ease-out infinite' }} />
+          <div style={{ position:'absolute', width:50, height:50, borderRadius:'50%',
+            background:'rgba(255,255,255,0.13)', border:'1px solid rgba(255,255,255,0.22)' }} />
+          <span style={{ position:'relative', zIndex:1, fontSize:36, lineHeight:1,
+            transform:`rotate(-${bearing}deg)`,
+            filter:'drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 2px 14px rgba(0,0,0,0.7))' }}>
+            ✈️
+          </span>
+        </div>
+      </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
           PREFLIGHT OVERLAY — position:fixed so it's always above Leaflet
@@ -420,9 +426,9 @@ export function MapFlightView({
             </div>
           </div>
 
-          {/* TOP-RIGHT: Map controls */}
-          <div style={{ position:'fixed', top:20, right:20, zIndex:8100, display:'flex', flexDirection:'column', gap:10 }}>
-            <button onClick={toggleLayer} style={{ ...BTN, background: isSat ? 'rgba(255,255,255,0.2)' : BTN.background }}
+          {/* TOP-RIGHT: Map controls + Sound */}
+          <div style={{ position:'fixed', top:20, right:20, zIndex:8100, display:'flex', flexDirection:'column', gap:10, alignItems:'flex-end' }}>
+            <button onClick={toggleLayer} style={{ ...BTN, background: isSat ? 'rgba(255,255,255,0.22)' : BTN.background }}
               title={isSat?'Street':'Satellite'}>
               {isSat ? (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -444,12 +450,69 @@ export function MapFlightView({
               </svg>
             </button>
             <button onClick={toggleLabels}
-              style={{ ...BTN, background: showLabels ? 'rgba(255,255,255,0.2)' : BTN.background }}
+              style={{ ...BTN, background: showLabels ? 'rgba(255,255,255,0.22)' : BTN.background }}
               title="Labels">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                 <path d="M4 6h16M4 12h10M4 18h12"/>
               </svg>
             </button>
+
+            {/* Sound button */}
+            <button
+              onClick={() => setShowSoundPicker(v => !v)}
+              style={{ ...BTN, background: (showSoundPicker || currentSound !== 'silence') ? 'rgba(255,255,255,0.22)' : BTN.background, marginTop:4 }}
+              title="Ambient sounds"
+            >
+              <span style={{ fontSize:18 }}>
+                {currentSound === 'silence' ? '🔇' : SOUND_OPTIONS.find(s => s.type === currentSound)?.emoji ?? '🔊'}
+              </span>
+            </button>
+
+            {/* Sound picker panel */}
+            <AnimatePresence>
+              {showSoundPicker && (
+                <motion.div
+                  key="sound-panel"
+                  initial={{ opacity:0, scale:0.93, x:12 }}
+                  animate={{ opacity:1, scale:1, x:0 }}
+                  exit={{ opacity:0, scale:0.93, x:12 }}
+                  transition={{ duration:0.2 }}
+                  style={{
+                    ...GLASS, padding:'16px 14px',
+                    position:'absolute', top:0, right:56,
+                    width:210, borderRadius:16,
+                  }}
+                >
+                  <p style={{ fontSize:10, letterSpacing:3, color:'rgba(255,255,255,0.38)',
+                    textTransform:'uppercase', marginBottom:12, fontWeight:700 }}>
+                    Ambient Sound
+                  </p>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    {SOUND_OPTIONS.map(opt => {
+                      const active = currentSound === opt.type;
+                      return (
+                        <button
+                          key={opt.type}
+                          onClick={() => { onSoundChange(opt.type); setShowSoundPicker(false); }}
+                          style={{
+                            display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                            padding:'10px 6px', borderRadius:12, cursor:'pointer', border:'none',
+                            background: active ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.06)',
+                            outline: active ? '1.5px solid rgba(255,255,255,0.4)' : 'none',
+                            transition:'background 0.15s',
+                          }}
+                        >
+                          <span style={{ fontSize:22 }}>{opt.emoji}</span>
+                          <span style={{ fontSize:11, fontWeight:600, color: active ? 'white' : 'rgba(255,255,255,0.6)' }}>
+                            {opt.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* BOTTOM STRIP: Time + Distance + Emergency */}
