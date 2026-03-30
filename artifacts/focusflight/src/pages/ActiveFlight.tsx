@@ -118,7 +118,7 @@ export default function ActiveFlight() {
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
       {/* FULL-SCREEN MAP */}
       <MapFlightView
         session={activeSession}
@@ -139,7 +139,8 @@ export default function ActiveFlight() {
             initial={{ opacity: 0, y: -60 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -60 }}
-            className="absolute top-20 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
+            style={{ position: 'fixed', top: 88, left: 0, right: 0, zIndex: 9200,
+              display: 'flex', justifyContent: 'center', padding: '0 16px', pointerEvents: 'none' }}
           >
             <div
               style={{
@@ -172,8 +173,9 @@ export default function ActiveFlight() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center px-4"
-            style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9900, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', padding: '0 16px',
+              background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
           >
             <motion.div
               initial={{ scale: 0.95, y: 10 }}
