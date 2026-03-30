@@ -315,59 +315,41 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
             </p>
           </div>
 
-          {/* Route grid */}
+          {/* Route dropdown */}
           <div>
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 10 }}>
               Select a Route — {ROUTES.length} iconic journeys
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {ROUTES.map(route => {
-                const active = selectedRoute?.id === route.id;
-                return (
-                  <button
-                    key={route.id}
-                    onClick={() => {
-                      setSelectedRoute(route);
-                      setDuration(Math.min(180, Math.max(25, Math.round(route.duration / 4 / 5) * 5)));
-                    }}
-                    style={{
-                      textAlign: 'left', padding: '14px 16px', borderRadius: 16,
-                      background: active ? 'rgba(48,209,88,0.1)' : 'rgba(255,255,255,0.03)',
-                      border: `1.5px solid ${active ? 'rgba(48,209,88,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                      cursor: 'pointer', transition: 'all 0.15s',
-                      boxShadow: active ? `0 0 20px rgba(48,209,88,0.12)` : 'none',
-                      position: 'relative',
-                    }}
-                  >
-                    {active && (
-                      <span style={{
-                        position: 'absolute', top: 10, right: 12,
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: GREEN, boxShadow: `0 0 6px ${GREEN}`,
-                      }} />
-                    )}
-                    {/* Route name */}
-                    <div style={{ fontSize: 13, fontWeight: 700, color: active ? GREEN : 'white', marginBottom: 5, lineHeight: 1.3 }}>
-                      {route.name}
-                    </div>
-                    {/* From → To */}
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 8, lineHeight: 1.4 }}>
-                      {route.from}
-                      <span style={{ margin: '0 5px', color: 'rgba(255,255,255,0.25)' }}>→</span>
-                      {route.to}
-                    </div>
-                    {/* Chips */}
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(48,209,88,0.12)', color: GREEN, border: '1px solid rgba(48,209,88,0.2)' }}>
-                        {route.distance.toLocaleString()} km
-                      </span>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
-                        ≈{fmtDuration(route.duration)} real
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <select
+                value={selectedRoute?.id ?? ''}
+                onChange={e => {
+                  const route = ROUTES.find(r => r.id === Number(e.target.value)) ?? null;
+                  setSelectedRoute(route);
+                  if (route) setDuration(Math.min(180, Math.max(25, Math.round(route.duration / 4 / 5) * 5)));
+                }}
+                style={{
+                  width: '100%', padding: '14px 48px 14px 18px', borderRadius: 14,
+                  background: 'rgba(255,255,255,0.05)', border: `1.5px solid ${selectedRoute ? 'rgba(48,209,88,0.45)' : 'rgba(255,255,255,0.12)'}`,
+                  color: selectedRoute ? 'white' : 'rgba(255,255,255,0.45)',
+                  fontSize: 15, fontWeight: 600, appearance: 'none', WebkitAppearance: 'none',
+                  cursor: 'pointer', outline: 'none', transition: 'border-color 0.2s',
+                  boxShadow: selectedRoute ? `0 0 0 3px rgba(48,209,88,0.08)` : 'none',
+                }}
+              >
+                <option value="" disabled style={{ background: '#0d1117', color: 'rgba(255,255,255,0.4)' }}>
+                  Choose your journey…
+                </option>
+                {ROUTES.map(route => (
+                  <option key={route.id} value={route.id} style={{ background: '#0d1117', color: 'white', padding: '8px 0' }}>
+                    {route.name} · {route.distance.toLocaleString()} km · ≈{fmtDuration(route.duration)}
+                  </option>
+                ))}
+              </select>
+              {/* Custom chevron */}
+              <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: selectedRoute ? GREEN : 'rgba(255,255,255,0.3)', fontSize: 16, lineHeight: 1 }}>
+                ▾
+              </span>
             </div>
           </div>
 
@@ -376,15 +358,33 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
             {selectedRoute && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
 
-                {/* Route summary banner */}
-                <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(48,209,88,0.08)', border: '1px solid rgba(48,209,88,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>{selectedRoute.name}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
-                      {selectedRoute.distance.toLocaleString()} km · {selectedRoute.waypoints.length} waypoints
+                {/* Route info panel */}
+                <div style={{ padding: '16px 20px', borderRadius: 14, background: 'rgba(48,209,88,0.07)', border: '1px solid rgba(48,209,88,0.22)', marginBottom: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '6px 16px', alignItems: 'start' }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>Departure</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{selectedRoute.from}</div>
+                    </div>
+                    <span style={{ fontSize: 28, lineHeight: 1, alignSelf: 'center' }}>🚂</span>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>Arrival</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{selectedRoute.to}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>Distance</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>{selectedRoute.distance.toLocaleString()} km</div>
                     </div>
                   </div>
-                  <span style={{ fontSize: 32 }}>🚂</span>
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 16 }}>
+                    <div>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>Real journey time </span>
+                      <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>≈{fmtDuration(selectedRoute.duration)}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>Waypoints </span>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>{selectedRoute.waypoints.length}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-card/50 border border-white/10 rounded-2xl p-6 space-y-6">
