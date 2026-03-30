@@ -142,9 +142,9 @@ export function MapFlightView({
   const [distKm,       setDistKm]       = useState<number | null>(null);
   const [planeBearing, setPlaneBearing] = useState(45);
   const [launching,    setLaunching]    = useState(false);
-  const [status, setStatus] = useState<'locating' | 'ready' | 'error'>('locating');
+  const [routeReady,   setRouteReady]   = useState(false); // true once airports resolved
 
-  // Display names resolved from airport list (may differ from session fields)
+  // Display names resolved from airport list
   const [originCode, setOriginCode] = useState('');
   const [destCode,   setDestCode]   = useState('');
   const [destCity,   setDestCity]   = useState('');
@@ -170,42 +170,49 @@ export function MapFlightView({
     mapRef.current         = map;
 
     const init = async () => {
-      // 1 ── Get GPS coords (fall back to a default if denied)
-      let gpsCoords: [number, number];
       try {
-        const pos = await getCurrentPosition();
-        gpsCoords = [pos.coords.latitude, pos.coords.longitude];
-      } catch (_) {
-        // Default: London — will still pick the nearest airport correctly
-        gpsCoords = [51.5074, -0.1278];
+        // 1 ── Get GPS coords (fall back to a sensible default if denied/slow)
+        let gpsCoords: [number, number];
+        try {
+          const pos = await getCurrentPosition();
+          gpsCoords = [pos.coords.latitude, pos.coords.longitude];
+        } catch (_) {
+          gpsCoords = [51.5074, -0.1278]; // London fallback
+        }
+
+        // 2 ── Nearest airport to user = origin
+        const origin = nearestAirport(gpsCoords);
+        const startCoords: [number, number] = [origin.lat, origin.lng];
+        startCoordsRef.current = startCoords;
+        setOriginCode(origin.code);
+
+        // Centre map on departure airport at preflight zoom
+        map.setView(startCoords, ZOOM_PREFLIGHT, { animate: false });
+
+        // 3 ── Pick destination airport that matches session duration
+        const targetKm  = targetDistanceKm(session.durationMinutes ?? 25);
+        const dest      = bestDestination(origin, targetKm);
+        const endCoords: [number, number] = [dest.lat, dest.lng];
+        endCoordsRef.current = endCoords;
+        setDestCode(dest.code);
+        setDestCity(dest.name);
+
+        // 4 ── Great-circle distance & bearing
+        const totalKm = haversineKm(startCoords, endCoords);
+        totalKmRef.current = totalKm;
+        setDistKm(totalKm);
+        setPlaneBearing(calcBearing(startCoords, endCoords));
+      } catch (err) {
+        console.error('[MapFlightView] init error:', err);
+        // Even on error, unblock the UI with defaults
+        const fallback: [number, number] = [51.5074, -0.1278];
+        if (!startCoordsRef.current) startCoordsRef.current = fallback;
+        if (!endCoordsRef.current)   endCoordsRef.current   = [48.8566, 2.3522];
+        map.setView(fallback, ZOOM_PREFLIGHT, { animate: false });
+      } finally {
+        // Always unblock the preflight screen — no matter what happened above
+        setRouteReady(true);
       }
-
-      // 2 ── Nearest airport to user = origin
-      const origin = nearestAirport(gpsCoords);
-      const startCoords: [number, number] = [origin.lat, origin.lng];
-      startCoordsRef.current = startCoords;
-      setOriginCode(origin.code);
-
-      // Show map at origin, preflight zoom
-      map.setView(startCoords, ZOOM_PREFLIGHT, { animate: false });
-
-      // 3 ── Pick destination airport closest to target distance for this duration
-      const targetKm = targetDistanceKm(session.durationMinutes);
-      const dest     = bestDestination(origin, targetKm);
-      const endCoords: [number, number] = [dest.lat, dest.lng];
-      endCoordsRef.current = endCoords;
-      setDestCode(dest.code);
-      setDestCity(dest.name);
-
-      // 4 ── Great-circle distance & bearing
-      const totalKm = haversineKm(startCoords, endCoords);
-      totalKmRef.current = totalKm;
-      setDistKm(totalKm);
-
-      const b = calcBearing(startCoords, endCoords);
-      setPlaneBearing(b);
-
-      setStatus('ready');
     };
 
     init();
@@ -309,15 +316,6 @@ export function MapFlightView({
       {/* ── MAP CANVAS ─────────────────────────────────────────────────── */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* ── LOCATING SPINNER ───────────────────────────────────────────── */}
-      {status === 'locating' && (
-        <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
-          <div className="overlay-pill flex flex-col items-center gap-3 px-10 py-7">
-            <div className="w-6 h-6 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-semibold tracking-wider text-white/80">Acquiring position…</span>
-          </div>
-        </div>
-      )}
 
       {/* ── PLANE ICON — fixed to viewport center ─────────────────────── */}
       <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
@@ -333,47 +331,61 @@ export function MapFlightView({
         </div>
       </div>
 
-      {/* ── PREFLIGHT OVERLAY ──────────────────────────────────────────── */}
+      {/* ── PREFLIGHT OVERLAY — shown immediately, data fills in async ── */}
       <AnimatePresence>
-        {!flightStarted && status === 'ready' && (
+        {!flightStarted && (
           <motion.div
             key="preflight"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 1.06 }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.6 }}
             className="absolute inset-0 z-50 flex flex-col items-center justify-center"
-            style={{ background: 'rgba(0,0,0,0.84)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+            style={{ background: 'rgba(0,0,0,0.86)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           >
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.55 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
               style={{ textAlign: 'center', maxWidth: 380, padding: '0 24px', width: '100%' }}
             >
               <p style={{ fontSize: 11, letterSpacing: 5, color: 'rgba(255,255,255,0.35)',
                 textTransform: 'uppercase', marginBottom: 12, fontWeight: 600 }}>
                 Destination
               </p>
+
+              {/* City name — show session.to immediately, update once route resolves */}
               <h1 style={{ fontSize: 52, fontWeight: 800, color: 'white', lineHeight: 1.1,
-                marginBottom: 6, letterSpacing: '-1.5px' }}>
-                {destCity || session.to}
+                marginBottom: 6, letterSpacing: '-1.5px', minHeight: 62 }}>
+                {routeReady ? (destCity || session.to) : (session.to || '…')}
               </h1>
+
+              {/* Airport codes */}
               <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.38)', marginBottom: 36,
-                fontFamily: 'monospace', letterSpacing: 3 }}>
-                {originCode || session.fromCode} ——— {destCode || session.toCode}
+                fontFamily: 'monospace', letterSpacing: 3, minHeight: 26 }}>
+                {routeReady
+                  ? `${originCode || '???'} ——— ${destCode || '???'}`
+                  : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 16, height: 16, borderRadius: '50%',
+                        border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white',
+                        display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                      Plotting route…
+                    </span>
+                }
               </p>
 
-              {/* Stats */}
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+              {/* Stats strip */}
               <div style={{
                 display: 'flex', background: 'rgba(255,255,255,0.06)',
                 borderRadius: 14, overflow: 'hidden',
                 border: '1px solid rgba(255,255,255,0.10)', marginBottom: 36,
               }}>
                 {[
-                  { label: 'Duration',  value: `${session.durationMinutes} min` },
-                  { label: 'Distance',  value: distKm ? `${Math.round(distKm).toLocaleString()} km` : '…' },
-                  { label: 'Focus',     value: session.focusType },
+                  { label: 'Duration', value: session.durationMinutes ? `${session.durationMinutes} min` : '—' },
+                  { label: 'Distance', value: distKm ? `${Math.round(distKm).toLocaleString()} km` : '…' },
+                  { label: 'Focus',    value: session.focusType || '—' },
                 ].map((item, i, arr) => (
                   <div key={item.label} style={{
                     flex: 1, padding: '14px 0', textAlign: 'center',
@@ -390,16 +402,21 @@ export function MapFlightView({
                 ))}
               </div>
 
-              {/* CTA */}
-              <button onClick={handleLaunch} disabled={launching} style={{
-                width: '100%', padding: '18px 0', borderRadius: 16,
-                background: launching ? 'rgba(255,255,255,0.55)' : 'white',
-                color: '#050810', fontSize: 17, fontWeight: 800,
-                cursor: launching ? 'default' : 'pointer', border: 'none',
-                letterSpacing: 0.3, transition: 'background 0.2s, transform 0.15s',
-                transform: launching ? 'scale(0.97)' : 'scale(1)',
-              }}>
-                {launching ? '✈️  Taking off…' : '✈️  Start Flight'}
+              {/* Start Flight button — enabled once route is ready */}
+              <button
+                onClick={handleLaunch}
+                disabled={!routeReady || launching}
+                style={{
+                  width: '100%', padding: '18px 0', borderRadius: 16,
+                  background: (!routeReady || launching) ? 'rgba(255,255,255,0.4)' : 'white',
+                  color: '#050810', fontSize: 17, fontWeight: 800,
+                  cursor: (!routeReady || launching) ? 'default' : 'pointer',
+                  border: 'none', letterSpacing: 0.3,
+                  transition: 'background 0.25s, transform 0.15s',
+                  transform: launching ? 'scale(0.97)' : 'scale(1)',
+                }}
+              >
+                {launching ? '✈️  Taking off…' : !routeReady ? '⏳  Plotting route…' : '✈️  Start Flight'}
               </button>
 
               {session.label && (
