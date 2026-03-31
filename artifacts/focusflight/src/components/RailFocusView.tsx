@@ -390,7 +390,7 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
                       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>Departure</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{selectedRoute.from}</div>
                     </div>
-                    <span style={{ fontSize: 28, lineHeight: 1, alignSelf: 'center' }}>🚂</span>
+                    <span style={{ fontSize: 28, lineHeight: 1, alignSelf: 'center' }}>{trainIcon}</span>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>Arrival</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{selectedRoute.to}</div>
@@ -440,12 +440,43 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
                       ))}
                     </div>
                   </div>
+
+                  {/* Train Icon */}
+                  <div>
+                    <div className="text-sm text-white mb-3">Train Icon</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+                      {TRAIN_ICONS.map(opt => {
+                        const active = trainIcon === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            title={opt.desc}
+                            onClick={() => setTrainIcon(opt.id)}
+                            style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                              padding: '10px 4px 8px', borderRadius: 12, cursor: 'pointer',
+                              border: active ? '1.5px solid rgba(48,209,88,0.6)' : '1.5px solid transparent',
+                              background: active ? 'rgba(48,209,88,0.15)' : 'rgba(255,255,255,0.05)',
+                              transition: 'all 0.14s',
+                            }}
+                          >
+                            <span style={{ fontSize: 20, lineHeight: 1 }}>{opt.id}</span>
+                            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 0.2,
+                              color: active ? '#30D158' : 'rgba(255,255,255,0.4)',
+                              textAlign: 'center', lineHeight: 1.2 }}>
+                              {opt.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <button onClick={handleBoardFromPicker}
                   className="w-full mt-4 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 text-background hover:opacity-90 transition-all"
                   style={{ background: GREEN, boxShadow: `0 0 30px rgba(48,209,88,0.3)` }}>
-                  🚂 Board Train
+                  {trainIcon} Board Train
                 </button>
               </motion.div>
             )}
