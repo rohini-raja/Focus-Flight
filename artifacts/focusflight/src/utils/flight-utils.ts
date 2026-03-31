@@ -20,6 +20,23 @@ export const PLANE_ICONS = [
 
 export type PlaneIconId = typeof PLANE_ICONS[number]['id'];
 
+export const TRAIN_ICONS = [
+  { id: '🚂', label: 'Steam',    desc: 'Classic locomotive' },
+  { id: '🚄', label: 'Bullet',   desc: 'Shinkansen speed' },
+  { id: '🚆', label: 'Express',  desc: 'Intercity express' },
+  { id: '🚇', label: 'Metro',    desc: 'Underground line' },
+  { id: '🚅', label: 'TGV',      desc: 'High-speed rail' },
+  { id: '🚈', label: 'Scenic',   desc: 'Light rail' },
+  { id: '🚊', label: 'Tram',     desc: 'City tram' },
+  { id: '🚝', label: 'Mono',     desc: 'Monorail glide' },
+  { id: '🚞', label: 'Mountain', desc: 'Alpine railway' },
+  { id: '🛤️', label: 'Tracks',   desc: 'Pure iron road' },
+  { id: '⚡', label: 'Flash',    desc: 'Electric sprint' },
+  { id: '🌙', label: 'Night',    desc: 'Sleeper train' },
+] as const;
+
+export type TrainIconId = typeof TRAIN_ICONS[number]['id'];
+
 export interface SessionConfig {
   id: string;
   mode: TransportMode;
@@ -33,6 +50,7 @@ export interface SessionConfig {
   date: string;
   distance: number;
   completed: boolean;
+  note?: string;
 }
 
 // Haversine distance calculator

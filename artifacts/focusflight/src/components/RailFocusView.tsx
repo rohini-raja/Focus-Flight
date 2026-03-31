@@ -4,9 +4,11 @@ import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTimer } from '@/hooks/use-timer';
 import { useLogbook } from '@/hooks/use-storage';
-import { formatTime, generateIata, FocusType } from '@/utils/flight-utils';
+import { formatTime, generateIata, FocusType, TRAIN_ICONS } from '@/utils/flight-utils';
+import { useAmbientSound, SOUND_OPTIONS, SoundType } from '@/hooks/use-ambient-sound';
 import { useMilestones } from '@/hooks/use-milestones';
 import { MilestoneToast } from './MilestoneToast';
+import { SessionNotePanel } from './SessionNotePanel';
 import confetti from 'canvas-confetti';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -184,6 +186,11 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
   const [showExit, setShowExit] = useState(false);
   const [abandonProgress, setAbandonProgress] = useState(0);
   const [abandonTimeLeft, setAbandonTimeLeft] = useState(0);
+  const [trainIcon, setTrainIcon] = useState('🚂');
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
+  const [sessionNote, setSessionNote] = useState('');
+  const sessionNoteRef = useRef('');
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -193,6 +200,10 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
   useEffect(() => { routeRef.current = selectedRoute; }, [selectedRoute]);
 
   const { addLog } = useLogbook();
+  const { currentSound, playSound } = useAmbientSound('silence');
+
+  /* Keep note ref in sync so useCallback can read latest value */
+  useEffect(() => { sessionNoteRef.current = sessionNote; }, [sessionNote]);
 
   /* ── Timer ── */
   const handleComplete = useCallback(() => {
@@ -216,6 +227,7 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
         fromCode: generateIata(route.from), toCode: generateIata(route.to),
         durationMinutes: duration, focusType, label: '',
         date: new Date().toISOString(), distance: route.distance, completed: true,
+        note: sessionNoteRef.current || undefined,
       });
     }, 6300);
   }, [duration, focusType, addLog]);
@@ -306,6 +318,7 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
         durationMinutes: Math.round((duration * 60 - timeLeft) / 60), focusType, label: '',
         date: new Date().toISOString(),
         distance: Math.round(route.distance * progress / 100), completed: false,
+        note: sessionNoteRef.current || undefined,
       });
     }
     setPhase('abandoned');
@@ -573,7 +586,7 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
         animate={isArriving && arrivalStep === 'decelerating' ? { x: [0, 2, -1, 1, 0], scale: [1, 1, 0.95, 1] } : { x: 0, scale: 1 }}
         transition={{ duration: 3, ease: 'easeOut' }}
         style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 44, zIndex: 9050, filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.9))', pointerEvents: 'none', userSelect: 'none', lineHeight: 1 }}
-      >🚂</motion.div>
+      >{trainIcon}</motion.div>
 
       {/* ARRIVED banner */}
       <AnimatePresence>
@@ -680,10 +693,99 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
         <div style={{ height: '100%', background: GREEN, width: `${progress}%`, transition: 'width 1s linear' }} />
       </div>
 
-      {/* Zoom indicator */}
-      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9100, ...GLASS, padding: '8px 14px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
-        z14 · ground level
-      </div>
+      {/* Top-right controls: icon picker + sound picker */}
+      {!isArriving && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          {/* Icon picker toggle */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowSoundPicker(false); setShowIconPicker(v => !v); }}
+              style={{ ...GLASS, padding: '8px 14px', fontSize: 22, cursor: 'pointer', border: showIconPicker ? '1px solid rgba(48,209,88,0.4)' : '1px solid rgba(255,255,255,0.11)', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 8 }}
+              title="Choose train icon"
+            >
+              {trainIcon}
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5 }}>▼</span>
+            </button>
+            <AnimatePresence>
+              {showIconPicker && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.93, x: 12 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.93, x: 12 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ ...GLASS, padding: '16px 14px', position: 'absolute', top: 0, right: 56, width: 232, borderRadius: 16 }}
+                >
+                  <p style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', marginBottom: 12, fontWeight: 700 }}>Train Icon</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>
+                    {TRAIN_ICONS.map(opt => {
+                      const active = trainIcon === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          title={opt.desc}
+                          onClick={() => { setTrainIcon(opt.id); setShowIconPicker(false); }}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 4px 8px', borderRadius: 11, cursor: 'pointer', border: active ? '1.5px solid rgba(48,209,88,0.6)' : '1.5px solid transparent', background: active ? 'rgba(48,209,88,0.15)' : 'rgba(255,255,255,0.06)', transition: 'all 0.14s' }}
+                        >
+                          <span style={{ fontSize: 22, lineHeight: 1 }}>{opt.id}</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.3, color: active ? '#30D158' : 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 1.2 }}>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Sound picker toggle */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowIconPicker(false); setShowSoundPicker(v => !v); }}
+              style={{ ...GLASS, padding: '8px 14px', fontSize: 20, cursor: 'pointer', border: (showSoundPicker || currentSound !== 'silence') ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(255,255,255,0.11)', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 6 }}
+              title="Ambient sounds"
+            >
+              <span>{currentSound === 'silence' ? '🔇' : SOUND_OPTIONS.find(s => s.type === currentSound)?.emoji ?? '🔊'}</span>
+            </button>
+            <AnimatePresence>
+              {showSoundPicker && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.93, x: 12 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.93, x: 12 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ ...GLASS, padding: '16px 14px', position: 'absolute', top: 0, right: 56, width: 210, borderRadius: 16 }}
+                >
+                  <p style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', marginBottom: 12, fontWeight: 700 }}>Ambient Sound</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {SOUND_OPTIONS.map(opt => {
+                      const active = currentSound === opt.type;
+                      return (
+                        <button
+                          key={opt.type}
+                          onClick={() => { playSound(opt.type as SoundType); setShowSoundPicker(false); }}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px', borderRadius: 12, cursor: 'pointer', border: 'none', background: active ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.06)', outline: active ? '1.5px solid rgba(255,255,255,0.4)' : 'none', transition: 'background 0.15s' }}
+                        >
+                          <span style={{ fontSize: 22 }}>{opt.emoji}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'white' : 'rgba(255,255,255,0.6)' }}>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {/* Session note */}
+      {!isArriving && (
+        <SessionNotePanel
+          value={sessionNote}
+          onChange={v => setSessionNote(v)}
+          bottomOffset={56}
+        />
+      )}
 
       {/* Exit modal */}
       <AnimatePresence>

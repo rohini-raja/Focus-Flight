@@ -12,6 +12,7 @@ import { MapFlightView } from '@/components/MapFlightView';
 import { ArrivalBoard } from '@/components/ArrivalBoard';
 import { useMilestones } from '@/hooks/use-milestones';
 import { MilestoneToast } from '@/components/MilestoneToast';
+import { SessionNotePanel } from '@/components/SessionNotePanel';
 
 export default function ActiveFlight() {
   const [, setLocation] = useLocation();
@@ -22,6 +23,11 @@ export default function ActiveFlight() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasLanded, setHasLanded] = useState(false);
   const [flightStarted, setFlightStarted] = useState(false);
+  const [sessionNote, setSessionNote] = useState('');
+  const sessionNoteRef = useRef<string>('');
+
+  /* Keep note ref in sync */
+  useEffect(() => { sessionNoteRef.current = sessionNote; }, [sessionNote]);
 
   const announced85 = useRef(false);
   const announced90 = useRef(false);
@@ -38,7 +44,7 @@ export default function ActiveFlight() {
   const handleTimerComplete = () => {
     setHasLanded(true);
     triggerConfetti();
-    if (activeSession) addLog({ ...activeSession, completed: true });
+    if (activeSession) addLog({ ...activeSession, completed: true, note: sessionNoteRef.current || undefined });
     pauseSound();
   };
 
@@ -105,6 +111,7 @@ export default function ActiveFlight() {
         distance: Math.round((timeFlown / totalSeconds) * (activeSession.distance || 0)),
         completed: false,
         label: `${activeSession.label} (Early Landing)`,
+        note: sessionNoteRef.current || undefined,
       });
     }
     clearSession();
@@ -252,6 +259,15 @@ export default function ActiveFlight() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* SESSION NOTE */}
+      {flightStarted && !hasLanded && (
+        <SessionNotePanel
+          value={sessionNote}
+          onChange={v => { setSessionNote(v); sessionNoteRef.current = v; }}
+          bottomOffset={100}
+        />
+      )}
 
       {/* MILESTONE TOASTS */}
       <MilestoneToast toast={milestoneToast} onDismiss={dismissMilestone} />
