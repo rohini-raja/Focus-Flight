@@ -28,16 +28,6 @@ export default function ActiveFlight() {
   const announced95 = useRef(false);
   const [announcement, setAnnouncement] = useState<string | null>(null);
 
-  const { milestoneToast, dismissMilestone } = useMilestones({
-    progress,
-    timeLeft,
-    totalSeconds,
-    from: activeSession?.from,
-    to: activeSession?.to,
-    mode: 'flight',
-    enabled: flightStarted && !hasLanded,
-  });
-
   useEffect(() => {
     if (!activeSession) {
       const t = setTimeout(() => setLocation('/book'), 3000);
@@ -54,6 +44,16 @@ export default function ActiveFlight() {
 
   const { timeLeft, isActive, toggle: toggleTimer, progress, totalSeconds } =
     useTimer(activeSession?.durationMinutes || 0, handleTimerComplete);
+
+  const { milestoneToast, dismissMilestone } = useMilestones({
+    progress,
+    timeLeft,
+    totalSeconds,
+    from: activeSession?.from,
+    to: activeSession?.to,
+    mode: 'flight',
+    enabled: flightStarted && !hasLanded,
+  });
 
   const { currentSound, isPlaying, playSound } = useAmbientSound('silence');
   const pauseSound = () => playSound('silence');
