@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
+import { WeatherOverlay, WeatherType } from './WeatherOverlay';
 
 interface BusWindowViewProps {
   progress: number;
+  weather?: WeatherType;
 }
 
 /* ─── Deterministic scene data ───────────────────────────────────────────── */
@@ -47,7 +49,7 @@ function repeat<T>(arr: T[], times: number): T[] {
 }
 
 /* ─── Component ───────────────────────────────────────────────────────────── */
-export function BusWindowView({ progress }: BusWindowViewProps) {
+export function BusWindowView({ progress, weather = 'clear' }: BusWindowViewProps) {
   const isDay    = progress < 38;
   const isSunset = progress >= 38 && progress < 62;
   const isNight  = progress >= 62;
@@ -299,6 +301,9 @@ export function BusWindowView({ progress }: BusWindowViewProps) {
             )
           )}
         </div>
+
+        {/* ── WEATHER ── */}
+        <WeatherOverlay weather={weather} />
 
         {/* ── GLASS REFLECTION ── */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(130deg, rgba(255,255,255,0.08) 0%, transparent 45%, rgba(0,0,0,0.12) 100%)', pointerEvents: 'none', zIndex: 10 }} />

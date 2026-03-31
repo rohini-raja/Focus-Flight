@@ -10,6 +10,8 @@ import { useLogbook, useSettings } from '@/hooks/use-storage';
 
 import { MapFlightView } from '@/components/MapFlightView';
 import { ArrivalBoard } from '@/components/ArrivalBoard';
+import { useMilestones } from '@/hooks/use-milestones';
+import { MilestoneToast } from '@/components/MilestoneToast';
 
 export default function ActiveFlight() {
   const [, setLocation] = useLocation();
@@ -25,6 +27,16 @@ export default function ActiveFlight() {
   const announced90 = useRef(false);
   const announced95 = useRef(false);
   const [announcement, setAnnouncement] = useState<string | null>(null);
+
+  const { milestoneToast, dismissMilestone } = useMilestones({
+    progress,
+    timeLeft,
+    totalSeconds,
+    from: activeSession?.from,
+    to: activeSession?.to,
+    mode: 'flight',
+    enabled: flightStarted && !hasLanded,
+  });
 
   useEffect(() => {
     if (!activeSession) {
@@ -240,6 +252,9 @@ export default function ActiveFlight() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* MILESTONE TOASTS */}
+      <MilestoneToast toast={milestoneToast} onDismiss={dismissMilestone} />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTimer } from '@/hooks/use-timer';
 import { useLogbook } from '@/hooks/use-storage';
 import { formatTime, generateIata, FocusType } from '@/utils/flight-utils';
+import { useMilestones } from '@/hooks/use-milestones';
+import { MilestoneToast } from './MilestoneToast';
 import confetti from 'canvas-confetti';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -218,7 +220,17 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
     }, 6300);
   }, [duration, focusType, addLog]);
 
-  const { timeLeft, isActive, toggle, progress } = useTimer(duration, handleComplete);
+  const { timeLeft, isActive, toggle, progress, totalSeconds } = useTimer(duration, handleComplete);
+
+  const { milestoneToast, dismissMilestone } = useMilestones({
+    progress,
+    timeLeft,
+    totalSeconds,
+    from: selectedRoute?.from,
+    to: selectedRoute?.to,
+    mode: 'rail',
+    enabled: phase === 'active' && isActive,
+  });
 
   useEffect(() => {
     if (!isActive && phase === 'active') { pauseStartRef.current = Date.now(); }
@@ -699,6 +711,8 @@ export function RailFocusView({ onEnd }: { onEnd: () => void }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <MilestoneToast toast={milestoneToast} onDismiss={dismissMilestone} />
     </div>
   );
 }

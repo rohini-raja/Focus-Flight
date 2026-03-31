@@ -10,6 +10,9 @@ import { useAmbientSound } from '@/hooks/use-ambient-sound';
 import { TrainWindowView } from '@/components/TrainWindowView';
 import { BusWindowView } from '@/components/BusWindowView';
 import { RailFocusView } from '@/components/RailFocusView';
+import { WeatherType, pickWeather } from '@/components/WeatherOverlay';
+import { useMilestones } from '@/hooks/use-milestones';
+import { MilestoneToast } from '@/components/MilestoneToast';
 import { formatTime, generateIata, FocusType, SessionConfig } from '@/utils/flight-utils';
 import confetti from 'canvas-confetti';
 
@@ -113,6 +116,7 @@ function ActiveTransitSession({
   const { addLog } = useLogbook();
   const [showExit, setShowExit] = useState(false);
   const [hasArrived, setHasArrived] = useState(false);
+  const [weather] = useState<WeatherType>(() => pickWeather());
 
   const handleComplete = () => {
     setHasArrived(true);
@@ -122,7 +126,17 @@ function ActiveTransitSession({
     onComplete(completedSession);
   };
 
-  const { timeLeft, isActive, toggle, progress } = useTimer(session.durationMinutes, handleComplete);
+  const { timeLeft, isActive, toggle, progress, totalSeconds } = useTimer(session.durationMinutes, handleComplete);
+
+  const { milestoneToast, dismissMilestone } = useMilestones({
+    progress,
+    timeLeft,
+    totalSeconds,
+    from: session.from,
+    to: session.to,
+    mode: 'transit',
+    enabled: isActive && !hasArrived,
+  });
 
   useEffect(() => {
     if (!isActive) toggle();
@@ -202,9 +216,9 @@ function ActiveTransitSession({
         {/* Window View */}
         <div className="w-full flex justify-center py-4">
           {vehicle === 'train' ? (
-            <TrainWindowView progress={progress} />
+            <TrainWindowView progress={progress} weather={weather} />
           ) : (
-            <BusWindowView progress={progress} />
+            <BusWindowView progress={progress} weather={weather} />
           )}
         </div>
 
@@ -286,6 +300,8 @@ function ActiveTransitSession({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <MilestoneToast toast={milestoneToast} onDismiss={dismissMilestone} />
     </div>
   );
 }
