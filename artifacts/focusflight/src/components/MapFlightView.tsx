@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SessionConfig, formatTime, PLANE_ICONS, generateIata } from '@/utils/flight-utils';
 import { SoundType, SOUND_OPTIONS } from '@/hooks/use-ambient-sound';
+import { useWeather } from '@/hooks/use-weather';
 
 // ─── 20 major world airports ──────────────────────────────────────────────────
 const AIRPORTS = [
@@ -31,10 +32,13 @@ const AIRPORTS = [
 type Airport = typeof AIRPORTS[number];
 
 // ─── Tile URLs ────────────────────────────────────────────────────────────────
-const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-const HYBRID_TILES    = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
-const STREET_TILES    = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const NIGHT_TILES     = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const SATELLITE_TILES   = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const HYBRID_TILES      = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+const STREET_TILES      = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+// NASA VIIRS Black Marble — real city lights as seen from orbit at night
+const NIGHT_EARTH_TILES = 'https://map1.vis.earthdata.nasa.gov/wmts-webmercator/VIIRS_City_Lights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg';
+// CartoDB labels only (no base) — overlay city names on top of night earth
+const NIGHT_LABELS_TILES = 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
 
 // ─── Zoom levels ──────────────────────────────────────────────────────────────
 const ZOOM_PREFLIGHT = 11;
@@ -132,14 +136,15 @@ export function MapFlightView({
   isActive, flightStarted, currentSound, planeIcon, mapTheme,
   onToggle, onStartFlight, onEarlyLanding, onSoundChange, onMapThemeToggle, onPlaneIconChange,
 }: MapFlightViewProps) {
-  const mapRef         = useRef<L.Map|null>(null);
-  const containerRef   = useRef<HTMLDivElement>(null);
-  const satRef         = useRef<L.TileLayer|null>(null);
-  const hybridRef      = useRef<L.TileLayer|null>(null);
-  const streetRef      = useRef<L.TileLayer|null>(null);
-  const nightRef       = useRef<L.TileLayer|null>(null);
-  const mapThemeRef    = useRef(mapTheme);
-  mapThemeRef.current  = mapTheme;
+  const mapRef           = useRef<L.Map|null>(null);
+  const containerRef     = useRef<HTMLDivElement>(null);
+  const satRef           = useRef<L.TileLayer|null>(null);
+  const hybridRef        = useRef<L.TileLayer|null>(null);
+  const streetRef        = useRef<L.TileLayer|null>(null);
+  const nightEarthRef    = useRef<L.TileLayer|null>(null);
+  const nightLabelsRef   = useRef<L.TileLayer|null>(null);
+  const mapThemeRef      = useRef(mapTheme);
+  mapThemeRef.current    = mapTheme;
   const startRef       = useRef<[number,number]|null>(null);
   const endRef         = useRef<[number,number]|null>(null);
   const totalKmRef     = useRef<number|null>(null);
@@ -157,6 +162,10 @@ export function MapFlightView({
   const [originCode,     setOriginCode]     = useState('');
   const [destCode,       setDestCode]       = useState('');
   const [destCity,       setDestCity]       = useState('');
+  const [destCoords,     setDestCoords]     = useState<[number,number]|null>(null);
+
+  // ── Real-time destination weather via Open-Meteo ─────────────────────────
+  const weather = useWeather(destCoords);
 
   // ── Map init ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -167,14 +176,16 @@ export function MapFlightView({
       dragging:false, doubleClickZoom:false, boxZoom:false,
       zoomAnimation:true, fadeAnimation:true,
     });
-    satRef.current    = L.tileLayer(SATELLITE_TILES,{maxZoom:18});
-    hybridRef.current = L.tileLayer(HYBRID_TILES,{maxZoom:18,opacity:0.8});
-    streetRef.current = L.tileLayer(STREET_TILES,{maxZoom:18});
-    nightRef.current  = L.tileLayer(NIGHT_TILES,{maxZoom:18,subdomains:'abcd'});
+    satRef.current        = L.tileLayer(SATELLITE_TILES,   { maxZoom:18 });
+    hybridRef.current     = L.tileLayer(HYBRID_TILES,      { maxZoom:18, opacity:0.8 });
+    streetRef.current     = L.tileLayer(STREET_TILES,      { maxZoom:18 });
+    nightEarthRef.current = L.tileLayer(NIGHT_EARTH_TILES, { maxZoom:8,  attribution:'NASA VIIRS', errorTileUrl: '' });
+    nightLabelsRef.current= L.tileLayer(NIGHT_LABELS_TILES,{ maxZoom:18, subdomains:'abcd', opacity:0.9 });
 
     // Apply the correct tile layers based on the current theme preference
     if (mapThemeRef.current === 'night') {
-      nightRef.current.addTo(map);
+      nightEarthRef.current.addTo(map);
+      nightLabelsRef.current.addTo(map);
     } else {
       satRef.current.addTo(map);
       hybridRef.current.addTo(map);
@@ -192,6 +203,7 @@ export function MapFlightView({
           setOriginCode(session.fromCode ?? generateIata(session.from));
           setDestCode(session.toCode     ?? generateIata(session.to));
           setDestCity(session.to);
+          setDestCoords(end);
           map.setView(start, ZOOM_PREFLIGHT, {animate:false});
           const km = haversineKm(start, end);
           totalKmRef.current = km;
@@ -217,6 +229,7 @@ export function MapFlightView({
           endRef.current = end;
           setDestCode(dest.code);
           setDestCity(dest.name);
+          setDestCoords(end);
 
           const km = haversineKm(start, end);
           totalKmRef.current = km;
@@ -240,14 +253,16 @@ export function MapFlightView({
   // ── React to mapTheme prop changes ──────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !satRef.current || !nightRef.current) return;
+    if (!map || !satRef.current || !nightEarthRef.current) return;
     if (mapTheme === 'night') {
-      if (satRef.current   && map.hasLayer(satRef.current))    map.removeLayer(satRef.current);
+      if (satRef.current    && map.hasLayer(satRef.current))    map.removeLayer(satRef.current);
       if (hybridRef.current && map.hasLayer(hybridRef.current)) map.removeLayer(hybridRef.current);
       if (streetRef.current && map.hasLayer(streetRef.current)) map.removeLayer(streetRef.current);
-      if (!map.hasLayer(nightRef.current)) nightRef.current.addTo(map);
+      if (!map.hasLayer(nightEarthRef.current))  nightEarthRef.current.addTo(map);
+      if (nightLabelsRef.current && !map.hasLayer(nightLabelsRef.current)) nightLabelsRef.current.addTo(map);
     } else {
-      if (nightRef.current && map.hasLayer(nightRef.current)) map.removeLayer(nightRef.current);
+      if (nightEarthRef.current  && map.hasLayer(nightEarthRef.current))  map.removeLayer(nightEarthRef.current);
+      if (nightLabelsRef.current && map.hasLayer(nightLabelsRef.current)) map.removeLayer(nightLabelsRef.current);
       if (isSat) {
         if (satRef.current && !map.hasLayer(satRef.current)) satRef.current.addTo(map);
         if (showLabels && hybridRef.current && !map.hasLayer(hybridRef.current)) hybridRef.current.addTo(map);
@@ -317,8 +332,9 @@ export function MapFlightView({
       </div>
 
       <style>{`
-        @keyframes halo { 0%{opacity:.7;transform:scale(1)} 100%{opacity:0;transform:scale(2)} }
-        @keyframes spin  { to{transform:rotate(360deg)} }
+        @keyframes halo    { 0%{opacity:.7;transform:scale(1)} 100%{opacity:0;transform:scale(2)} }
+        @keyframes spin    { to{transform:rotate(360deg)} }
+        @keyframes fadeIn  { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
       {/* ── Plane icon — fixed z:9050 so always visible above everything ── */}
@@ -428,8 +444,22 @@ export function MapFlightView({
                 {launching ? '✈️  Taking off…' : !routeReady ? '⏳  Plotting route…' : '✈️  Start Flight'}
               </button>
 
+              {/* Destination weather preview on pre-flight screen */}
+              {weather && (
+                <div style={{
+                  marginTop:20, display:'flex', alignItems:'center', justifyContent:'center',
+                  gap:8, fontSize:13, color:'rgba(255,255,255,0.5)',
+                }}>
+                  <span style={{ fontSize:20 }}>{weather.emoji}</span>
+                  <span style={{ color:'white', fontWeight:600 }}>{weather.tempC}°C</span>
+                  <span>{weather.label}</span>
+                  <span style={{ color:'rgba(255,255,255,0.3)' }}>·</span>
+                  <span>💨 {weather.windKmh} km/h</span>
+                </div>
+              )}
+
               {session.label && (
-                <p style={{ marginTop:20, fontSize:13, color:'rgba(255,255,255,0.25)', fontStyle:'italic' }}>
+                <p style={{ marginTop:14, fontSize:13, color:'rgba(255,255,255,0.25)', fontStyle:'italic' }}>
                   "{session.label}"
                 </p>
               )}
@@ -469,8 +499,9 @@ export function MapFlightView({
             </div>
           </div>
 
-          {/* TOP-CENTER: Altitude */}
-          <div style={{ position:'fixed', top:20, left:'50%', transform:'translateX(-50%)', zIndex:8100 }}>
+          {/* TOP-CENTER: Altitude + weather */}
+          <div style={{ position:'fixed', top:20, left:'50%', transform:'translateX(-50%)', zIndex:8100,
+            display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
             <div style={{ ...GLASS, padding:'9px 20px', display:'flex', alignItems:'center', gap:12,
               fontSize:12, fontFamily:'monospace', color:'rgba(255,255,255,0.55)' }}>
               <span>
@@ -479,6 +510,23 @@ export function MapFlightView({
               <span style={{ color:'rgba(255,255,255,0.2)' }}>|</span>
               <span>{altFt.toLocaleString()} ft</span>
             </div>
+
+            {/* Weather widget — fades in once data arrives */}
+            {weather && (
+              <div style={{
+                ...GLASS,
+                padding:'7px 16px',
+                display:'flex', alignItems:'center', gap:10,
+                fontSize:12, animation:'fadeIn 0.6s ease',
+              }}>
+                <span style={{ fontSize:18, lineHeight:1 }}>{weather.emoji}</span>
+                <span style={{ color:'white', fontWeight:700 }}>{weather.tempC}°C</span>
+                <span style={{ color:'rgba(255,255,255,0.4)' }}>·</span>
+                <span style={{ color:'rgba(255,255,255,0.65)' }}>{weather.label}</span>
+                <span style={{ color:'rgba(255,255,255,0.4)' }}>·</span>
+                <span style={{ color:'rgba(255,255,255,0.5)', fontFamily:'monospace' }}>💨 {weather.windKmh} km/h</span>
+              </div>
+            )}
           </div>
 
           {/* TOP-RIGHT: Map controls + Night + Sound */}
