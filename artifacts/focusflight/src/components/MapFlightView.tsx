@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SessionConfig, formatTime, PLANE_ICONS } from '@/utils/flight-utils';
+import { SessionConfig, formatTime, PLANE_ICONS, generateIata } from '@/utils/flight-utils';
 import { SoundType, SOUND_OPTIONS } from '@/hooks/use-ambient-sound';
 
 // ─── 20 major world airports ──────────────────────────────────────────────────
@@ -183,29 +183,46 @@ export function MapFlightView({
 
     const init = async () => {
       try {
-        let gps: [number,number];
-        try {
-          const pos = await getCurrentPosition();
-          gps = [pos.coords.latitude, pos.coords.longitude];
-        } catch { gps = [51.5074,-0.1278]; }
+        // ── Prefer coords stored in session (set via geocoding at booking time)
+        if (session.fromCoords && session.toCoords) {
+          const start = session.fromCoords as [number,number];
+          const end   = session.toCoords   as [number,number];
+          startRef.current = start;
+          endRef.current   = end;
+          setOriginCode(session.fromCode ?? generateIata(session.from));
+          setDestCode(session.toCode     ?? generateIata(session.to));
+          setDestCity(session.to);
+          map.setView(start, ZOOM_PREFLIGHT, {animate:false});
+          const km = haversineKm(start, end);
+          totalKmRef.current = km;
+          setDistKm(km);
+          setBearing(calcBearing(start, end));
+        } else {
+          // ── Fallback: GPS → nearest airport → best destination
+          let gps: [number,number];
+          try {
+            const pos = await getCurrentPosition();
+            gps = [pos.coords.latitude, pos.coords.longitude];
+          } catch { gps = [51.5074,-0.1278]; }
 
-        const origin = nearestAirport(gps);
-        const start: [number,number] = [origin.lat, origin.lng];
-        startRef.current = start;
-        setOriginCode(origin.code);
-        map.setView(start, ZOOM_PREFLIGHT, {animate:false});
+          const origin = nearestAirport(gps);
+          const start: [number,number] = [origin.lat, origin.lng];
+          startRef.current = start;
+          setOriginCode(origin.code);
+          map.setView(start, ZOOM_PREFLIGHT, {animate:false});
 
-        const targetKm = targetDistanceKm(session.durationMinutes ?? 25);
-        const dest = bestDestination(origin, targetKm);
-        const end: [number,number] = [dest.lat, dest.lng];
-        endRef.current = end;
-        setDestCode(dest.code);
-        setDestCity(dest.name);
+          const targetKm = targetDistanceKm(session.durationMinutes ?? 25);
+          const dest = bestDestination(origin, targetKm);
+          const end: [number,number] = [dest.lat, dest.lng];
+          endRef.current = end;
+          setDestCode(dest.code);
+          setDestCity(dest.name);
 
-        const km = haversineKm(start, end);
-        totalKmRef.current = km;
-        setDistKm(km);
-        setBearing(calcBearing(start, end));
+          const km = haversineKm(start, end);
+          totalKmRef.current = km;
+          setDistKm(km);
+          setBearing(calcBearing(start, end));
+        }
       } catch (err) {
         console.error('[MapFlightView] init:', err);
         const fb: [number,number] = [51.5074,-0.1278];

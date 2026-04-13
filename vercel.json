@@ -1,0 +1,9 @@
+{
+  "buildCommand": "pnpm --filter @workspace/focusflight run build",
+  "outputDirectory": "artifacts/focusflight/dist/public",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "env": {
+    "BASE_PATH": "/"
+  }
+}

@@ -38,7 +38,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center pt-10 pb-20 px-4">
+    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center pt-10 pb-nav-safe md:pb-20 px-4">
       <StarField />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />

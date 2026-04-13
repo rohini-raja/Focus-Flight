@@ -26,7 +26,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] pt-12 pb-24 px-4 flex flex-col items-center">
+    <div className="relative min-h-[calc(100vh-4rem)] pt-12 pb-nav-safe md:pb-24 px-4 flex flex-col items-center">
       <StarField />
 
       <main className="w-full max-w-2xl space-y-8 relative z-10">

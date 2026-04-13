@@ -146,3 +146,13 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+
+/* Safe-area / notch support for PWA on iOS */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pb-nav-safe {
+  /* bottom nav (64px) + safe area for iOS home indicator */
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}

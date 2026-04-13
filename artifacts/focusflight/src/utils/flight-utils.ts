@@ -51,6 +51,9 @@ export interface SessionConfig {
   distance: number;
   completed: boolean;
   note?: string;
+  /** Resolved coordinates [lat, lng] – set at booking time via geocoding */
+  fromCoords?: [number, number];
+  toCoords?: [number, number];
 }
 
 // Haversine distance calculator
@@ -211,6 +214,65 @@ export interface Achievement {
   name: string;
   description: string;
   check: (logs: SessionConfig[]) => boolean;
+}
+
+/* ─── Geocoding (Nominatim OpenStreetMap) ───────────────────────────────── */
+
+const _geocodeCache = new Map<string, [number, number] | null>();
+
+export async function geocodeCity(city: string): Promise<[number, number] | null> {
+  const key = city.trim().toLowerCase();
+  if (!key) return null;
+
+  // Check KNOWN_CITIES first
+  const known = KNOWN_CITIES[key.replace(/\s/g, '')];
+  if (known) return known;
+
+  if (_geocodeCache.has(key)) return _geocodeCache.get(key)!;
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1&addressdetails=0`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'FocusFlight/1.0' } });
+    if (!res.ok) throw new Error('nominatim error');
+    const data = await res.json();
+    if (!data.length) { _geocodeCache.set(key, null); return null; }
+    const coords: [number, number] = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    _geocodeCache.set(key, coords);
+    return coords;
+  } catch {
+    _geocodeCache.set(key, null);
+    return null;
+  }
+}
+
+export interface CitysuggestionResult {
+  name: string;
+  displayName: string;
+  coords: [number, number];
+}
+
+export async function searchCities(query: string): Promise<CitysuggestionResult[]> {
+  if (query.trim().length < 2) return [];
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&featuretype=city&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'FocusFlight/1.0' } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data
+      .filter((d: any) => d.lat && d.lon)
+      .map((d: any) => {
+        const addr = d.address ?? {};
+        const name = addr.city ?? addr.town ?? addr.village ?? addr.county ?? d.name ?? query;
+        const country = addr.country ?? '';
+        return {
+          name,
+          displayName: country ? `${name}, ${country}` : name,
+          coords: [parseFloat(d.lat), parseFloat(d.lon)] as [number, number],
+        };
+      });
+  } catch {
+    return [];
+  }
 }
 
 export const ACHIEVEMENTS: Achievement[] = [

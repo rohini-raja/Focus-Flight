@@ -63,7 +63,7 @@ export function Navbar() {
       </div>
       
       {/* Mobile nav indicator bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 pb-safe z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 z-50 pb-safe">
         <div className="flex justify-around items-center h-16 px-2">
            {navItems.map((item) => (
               <Link 
