@@ -41,9 +41,9 @@ function SplitFlapChar({ targetChar, delay }: { targetChar: string; delay: numbe
   }, [targetChar, delay]);
 
   return (
-    <div className="w-16 h-24 bg-zinc-900 border border-zinc-700 rounded-md flex items-center justify-center relative shadow-xl overflow-hidden">
+    <div className="w-10 h-16 sm:w-16 sm:h-24 bg-zinc-900 border border-zinc-700 rounded-md flex items-center justify-center relative shadow-xl overflow-hidden">
       <div className="absolute inset-x-0 top-1/2 h-px bg-black/50 z-10" />
-      <span className="text-5xl font-mono font-bold text-amber-500 z-0">{char}</span>
+      <span className="text-3xl sm:text-5xl font-mono font-bold text-amber-500 z-0">{char}</span>
     </div>
   );
 }
@@ -102,7 +102,7 @@ export function ArrivalBoard({ session, onExit, onBookAnother }: ArrivalBoardPro
           >
             <header className="mb-12 border-b-4 border-zinc-800 pb-6 flex items-end justify-between">
               <div>
-                <h1 className="text-4xl md:text-5xl font-mono font-bold text-amber-500 mb-2">ARRIVALS</h1>
+                <h1 className="text-2xl sm:text-4xl md:text-5xl font-mono font-bold text-amber-500 mb-2">ARRIVALS</h1>
                 <p className="text-zinc-400 font-mono text-lg">{session.to.toUpperCase()} INTERNATIONAL</p>
               </div>
               <div className="text-right font-mono text-zinc-500 hidden md:block">
@@ -115,40 +115,40 @@ export function ArrivalBoard({ session, onExit, onBookAnother }: ArrivalBoardPro
             <div className="w-full overflow-x-auto mb-12">
               <table className="w-full text-left font-mono whitespace-nowrap">
                 <thead>
-                  <tr className="text-zinc-500 border-b border-zinc-800">
-                    <th className="py-4 px-4">FLIGHT</th>
-                    <th className="py-4 px-4">FROM</th>
-                    <th className="py-4 px-4">STATUS</th>
-                    <th className="py-4 px-4">GATE</th>
-                    <th className="py-4 px-4">DURATION</th>
+                  <tr className="text-zinc-500 border-b border-zinc-800 text-xs sm:text-sm">
+                    <th className="py-2 px-2 sm:py-4 sm:px-4">FLIGHT</th>
+                    <th className="py-2 px-2 sm:py-4 sm:px-4">FROM</th>
+                    <th className="py-2 px-2 sm:py-4 sm:px-4">STATUS</th>
+                    <th className="py-2 px-2 sm:py-4 sm:px-4">GATE</th>
+                    <th className="py-2 px-2 sm:py-4 sm:px-4">DURATION</th>
                   </tr>
                 </thead>
-                <tbody className="text-lg md:text-2xl">
+                <tbody className="text-xs sm:text-base md:text-2xl">
                   {/* Dummy Row */}
                   <tr className="border-b border-zinc-800/50 text-zinc-600">
-                    <td className="py-4 px-4">QF442</td>
-                    <td className="py-4 px-4">SYDNEY</td>
-                    <td className="py-4 px-4">LANDED</td>
-                    <td className="py-4 px-4">A4</td>
-                    <td className="py-4 px-4">1h 20m</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">QF442</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">SYDNEY</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">LANDED</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">A4</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">1h 20m</td>
                   </tr>
                   {/* Active Session Row */}
                   <tr className="border-b border-zinc-700 bg-amber-500/10 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                    <td className="py-4 px-4 font-bold">FF001</td>
-                    <td className="py-4 px-4 font-bold">{session.from.toUpperCase()}</td>
-                    <td className="py-4 px-4 text-green-400 animate-pulse flex items-center gap-2">
+                    <td className="py-2 px-2 sm:py-4 sm:px-4 font-bold">FF001</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4 font-bold">{session.from.toUpperCase()}</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4 text-green-400 animate-pulse flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-green-400" /> ARRIVED
                     </td>
-                    <td className="py-4 px-4 font-bold">B7</td>
-                    <td className="py-4 px-4 font-bold">{formatTime(session.durationMinutes * 60)}</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4 font-bold">B7</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4 font-bold">{formatTime(session.durationMinutes * 60)}</td>
                   </tr>
                   {/* Dummy Row */}
                   <tr className="border-b border-zinc-800/50 text-zinc-600">
-                    <td className="py-4 px-4">BA909</td>
-                    <td className="py-4 px-4">LONDON</td>
-                    <td className="py-4 px-4">DELAYED</td>
-                    <td className="py-4 px-4">C12</td>
-                    <td className="py-4 px-4">8h 45m</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">BA909</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">LONDON</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">DELAYED</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">C12</td>
+                    <td className="py-2 px-2 sm:py-4 sm:px-4">8h 45m</td>
                   </tr>
                 </tbody>
               </table>

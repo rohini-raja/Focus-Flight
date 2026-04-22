@@ -114,7 +114,7 @@ export default function Home() {
             key={mode}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-display font-bold text-white leading-tight"
+            className="text-4xl sm:text-5xl md:text-7xl font-display font-bold text-white leading-tight"
           >
             {mode === 'flight' ? (
               <>Your focus, <br className="hidden md:block" /><span className="text-gradient-primary">cleared for takeoff.</span></>
@@ -128,7 +128,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
             {mode === 'flight'
               ? 'Turn your work sessions into immersive virtual flights. Set your destination, stay on course, and track your productivity journey across the globe.'
@@ -182,7 +182,7 @@ export default function Home() {
           transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full"
         >
-          <div className="glass p-8 rounded-2xl text-left hover:-translate-y-2 transition-transform duration-300">
+          <div className="glass p-5 md:p-8 rounded-2xl text-left hover:-translate-y-2 transition-transform duration-300">
             <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6">
               <Compass className="w-6 h-6" />
             </div>
@@ -194,7 +194,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="glass p-8 rounded-2xl text-left hover:-translate-y-2 transition-transform duration-300">
+          <div className="glass p-5 md:p-8 rounded-2xl text-left hover:-translate-y-2 transition-transform duration-300">
             <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center mb-6">
               {mode === 'flight' ? <Plane className="w-6 h-6" /> : <span className="text-2xl">🗺️</span>}
             </div>
@@ -206,7 +206,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="glass p-8 rounded-2xl text-left hover:-translate-y-2 transition-transform duration-300">
+          <div className="glass p-5 md:p-8 rounded-2xl text-left hover:-translate-y-2 transition-transform duration-300">
             <div className="w-12 h-12 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center mb-6">
               <BarChart3 className="w-6 h-6" />
             </div>

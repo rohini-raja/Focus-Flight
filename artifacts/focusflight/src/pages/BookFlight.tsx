@@ -272,7 +272,7 @@ export default function BookFlight() {
                 Route Selection
               </div>
 
-              <div className="flex flex-col sm:flex-row items-end gap-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4">
                 <CityInput
                   label="Departure"
                   placeholder="Any city in the world…"
@@ -283,7 +283,7 @@ export default function BookFlight() {
 
                 <button
                   onClick={handleSwap}
-                  className="mb-0.5 p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all shrink-0 text-white"
+                  className="self-center sm:self-end sm:mb-0.5 p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all shrink-0 text-white rotate-90 sm:rotate-0"
                   title="Swap cities"
                 >
                   <ArrowRightLeft className="w-5 h-5" />
@@ -375,7 +375,7 @@ export default function BookFlight() {
 
         {/* Right Preview Panel */}
         <div className="lg:col-span-5 flex flex-col">
-          <div className="sticky top-24 space-y-6">
+          <div className="sticky top-4 sm:top-24 space-y-6">
             <h3 className="text-sm uppercase tracking-widest text-muted-foreground font-bold text-center mb-4">
               Boarding Pass Preview
             </h3>

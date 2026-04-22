@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SessionConfig, formatTime, PLANE_ICONS, generateIata } from '@/utils/flight-utils';
 import { SoundType, SOUND_OPTIONS } from '@/hooks/use-ambient-sound';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useWeather } from '@/hooks/use-weather';
 
 // ─── 20 major world airports ──────────────────────────────────────────────────
@@ -163,6 +164,7 @@ export function MapFlightView({
   const [destCode,       setDestCode]       = useState('');
   const [destCity,       setDestCity]       = useState('');
   const [destCoords,     setDestCoords]     = useState<[number,number]|null>(null);
+  const isMobile = useIsMobile();
 
   // ── Real-time destination weather via Open-Meteo ─────────────────────────
   const weather = useWeather(destCoords);
@@ -385,7 +387,7 @@ export function MapFlightView({
               </p>
 
               {/* City name */}
-              <h1 style={{ fontSize:54, fontWeight:800, color:'white', lineHeight:1.05,
+              <h1 style={{ fontSize: isMobile ? 32 : 54, fontWeight:800, color:'white', lineHeight:1.05,
                 marginBottom:8, letterSpacing:'-2px' }}>
                 {routeReady ? (destCity || session.to) : (session.to || '—')}
               </h1>
@@ -420,7 +422,7 @@ export function MapFlightView({
                       textTransform:'uppercase', marginBottom:6 }}>
                       {item.label}
                     </div>
-                    <div style={{ fontSize:17, fontWeight:700, color:'white' }}>
+                    <div style={{ fontSize: isMobile ? 13 : 17, fontWeight:700, color:'white' }}>
                       {item.value}
                     </div>
                   </div>
@@ -607,8 +609,8 @@ export function MapFlightView({
                   transition={{ duration:0.2 }}
                   style={{
                     ...GLASS, padding:'16px 14px',
-                    position:'absolute', top:0, right:56,
-                    width:232, borderRadius:16,
+                    position:'absolute', top:0, right: isMobile ? 0 : 56,
+                    width: isMobile ? 'min(232px, calc(100vw - 80px))' : 232, borderRadius:16,
                   }}
                 >
                   <p style={{ fontSize:10, letterSpacing:3, color:'rgba(255,255,255,0.38)',
@@ -667,8 +669,8 @@ export function MapFlightView({
                   transition={{ duration:0.2 }}
                   style={{
                     ...GLASS, padding:'16px 14px',
-                    position:'absolute', top:0, right:56,
-                    width:210, borderRadius:16,
+                    position:'absolute', top:0, right: isMobile ? 0 : 56,
+                    width: isMobile ? 'min(210px, calc(100vw - 80px))' : 210, borderRadius:16,
                   }}
                 >
                   <p style={{ fontSize:10, letterSpacing:3, color:'rgba(255,255,255,0.38)',
@@ -705,15 +707,15 @@ export function MapFlightView({
 
           {/* BOTTOM STRIP: Time + Distance + Emergency */}
           <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:8100,
-            padding:'0 20px 24px',
+            padding: isMobile ? `0 10px calc(env(safe-area-inset-bottom, 12px) + 12px)` : '0 20px 24px',
             display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:16,
             pointerEvents:'none' }}>
 
             {/* Time Remaining */}
-            <div style={{ ...GLASS, padding:'14px 22px', pointerEvents:'auto', flex:1, minWidth:0 }}>
+            <div style={{ ...GLASS, padding: isMobile ? '10px 12px' : '14px 22px', pointerEvents:'auto', flex:1, minWidth:0 }}>
               <div style={{ fontSize:10, letterSpacing:3, color:'rgba(255,255,255,0.4)',
                 textTransform:'uppercase', marginBottom:4 }}>Time Remaining</div>
-              <div style={{ fontSize:36, fontWeight:800, letterSpacing:'-1px', lineHeight:1,
+              <div style={{ fontSize: isMobile ? 22 : 36, fontWeight:800, letterSpacing:'-1px', lineHeight:1,
                 fontFamily:'system-ui,-apple-system,sans-serif', color:'white' }}>
                 {timeLeftMin<60 ? `${timeLeftMin} min` : `${Math.floor(timeLeftMin/60)}h ${timeLeftMin%60}m`}
               </div>
@@ -748,10 +750,10 @@ export function MapFlightView({
             </div>
 
             {/* Distance Remaining */}
-            <div style={{ ...GLASS, padding:'14px 22px', pointerEvents:'auto', flex:1, minWidth:0, textAlign:'right' }}>
+            <div style={{ ...GLASS, padding: isMobile ? '10px 12px' : '14px 22px', pointerEvents:'auto', flex:1, minWidth:0, textAlign:'right' }}>
               <div style={{ fontSize:10, letterSpacing:3, color:'rgba(255,255,255,0.4)',
                 textTransform:'uppercase', marginBottom:4 }}>Distance Remaining</div>
-              <div style={{ fontSize:36, fontWeight:800, letterSpacing:'-1px', lineHeight:1,
+              <div style={{ fontSize: isMobile ? 22 : 36, fontWeight:800, letterSpacing:'-1px', lineHeight:1,
                 fontFamily:'system-ui,-apple-system,sans-serif', color:'white' }}>
                 {distKm!==null ? `${Math.round(distKm).toLocaleString()} km` : '— km'}
               </div>
