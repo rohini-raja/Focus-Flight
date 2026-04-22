@@ -62,25 +62,6 @@ export function Navbar() {
         </div>
       </div>
       
-      {/* Mobile nav indicator bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 z-50 pb-safe">
-        <div className="flex justify-around items-center h-16 px-2">
-           {navItems.map((item) => (
-              <Link 
-                key={item.path} 
-                href={item.path}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                  location === item.path 
-                    ? 'text-primary' 
-                    : 'text-muted-foreground'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </Link>
-            ))}
-        </div>
-      </div>
     </nav>
   );
 }
